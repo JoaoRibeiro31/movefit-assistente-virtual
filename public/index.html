@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Protótipo acadêmico do assistente virtual MoveFIT.">
+  <title>MoveFIT | Assistente Muvinho</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a href="#inicio" class="brand" aria-label="MoveFIT início"><span class="brand-mark">M</span> Move<span>FIT</span></a>
+    <span class="top-label">Protótipo acadêmico</span>
+  </header>
+  <main id="inicio" class="layout">
+    <section class="intro" aria-labelledby="titulo">
+      <span class="eyebrow">SEU ASSISTENTE VIRTUAL</span>
+      <h1 id="titulo">Conheça o <span>Muvinho.</span></h1>
+      <p>Um jeito mais simples de tirar dúvidas sobre sua academia, conhecer aulas e receber orientações gerais de treino.</p>
+      <div class="avatar-panel"><img src="./assets/muvinho.webp" alt="Mascote Muvinho da MoveFIT"></div>
+      <p class="disclaimer">Este é um protótipo demonstrativo. Não realiza reservas reais nem substitui profissionais de Educação Física.</p>
+    </section>
+    <section class="chat" aria-label="Chat com Muvinho">
+      <div class="chat-header"><span class="avatar-small"><img src="./assets/muvinho.webp" alt=""></span><div><strong>Muvinho</strong><small>Assistente virtual MoveFIT</small></div><span class="demo-pill">DEMO</span></div>
+      <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text">
+        <div class="message assistant">Olá! Sou o Muvinho, assistente da MoveFIT. Esta é uma demonstração da interface. Como posso ajudar?</div>
+      </div>
+      <div class="quick-actions" aria-label="Perguntas de exemplo">
+        <button type="button" data-question="Quais são os horários das aulas?">Horários</button>
+        <button type="button" data-question="Como posso fazer aquecimento?">Aquecimento</button>
+        <button type="button" data-question="Quero agendar uma aula">Agendar aula</button>
+        <button type="button" data-question="Sou iniciante, quais exercícios posso fazer?">Sou iniciante</button>
+      </div>
+      <form id="chat-form" class="composer">
+        <label class="sr-only" for="user-input">Sua mensagem</label>
+        <input id="user-input" name="message" maxlength="500" required placeholder="Digite sua mensagem..." autocomplete="off">
+        <button type="submit" aria-label="Enviar mensagem">Enviar</button>
+      </form>
+      <p class="chat-note">Respostas simuladas para demonstrar o layout. Integração com Gemini e MongoDB pendente.</p>
+    </section>
+  </main>
+</body>
+</html>
