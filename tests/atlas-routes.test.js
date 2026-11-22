@@ -66,3 +66,22 @@ test("rotas Atlas validam entradas e falham sem exibir dados de exemplo ou detal
   assert.equal(result.status, 502);
   assert.doesNotMatch(result.body.error, /detalhe privado|fake\.test/);
 });
+
+test("o log distingue a falha de TLS sem registrar detalhes do Atlas", async t => {
+  const privateDetail = "mongodb://usuario:senha@fake.test:27017/";
+  const cause = Object.assign(new Error(privateDetail), { code: "ERR_TLS_CERT_ALTNAME_INVALID" });
+  const serverError = new Error("conexão de teste", { cause });
+  const error = Object.assign(new Error("servidor de teste"), {
+    name: "MongoServerSelectionError",
+    reason: { servers: new Map([["fake.test", { error: serverError }]]) },
+  });
+  t.mock.method(MongoClient.prototype, "db", () => { throw error; });
+  const warn = t.mock.method(console, "warn", () => {});
+
+  const result = await call(aulas, "aulas");
+  assert.equal(result.status, 502);
+  assert.doesNotMatch(result.body.error, /fake\.test|senha|TLS/);
+  assert.deepEqual(warn.mock.calls.map(call => call.arguments), [
+    ["MoveFIT: consulta Atlas indisponível (falha de TLS)."],
+  ]);
+});
