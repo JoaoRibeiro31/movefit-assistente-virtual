@@ -1,0 +1,10 @@
+[
+  { "codigo": "funcional-seg-1800", "aulaCodigo": "funcional", "diaSemana": 1, "horario": "18:00", "vagasTotais": 15, "vagasDisponiveis": 8, "ativo": true },
+  { "codigo": "pilates-ter-0900", "aulaCodigo": "pilates", "diaSemana": 2, "horario": "09:00", "vagasTotais": 12, "vagasDisponiveis": 6, "ativo": true },
+  { "codigo": "bike-qua-1900", "aulaCodigo": "bike-indoor", "diaSemana": 3, "horario": "19:00", "vagasTotais": 20, "vagasDisponiveis": 12, "ativo": true },
+  { "codigo": "funcional-qui-1800", "aulaCodigo": "funcional", "diaSemana": 4, "horario": "18:00", "vagasTotais": 15, "vagasDisponiveis": 10, "ativo": true },
+  { "codigo": "pilates-qui-1000", "aulaCodigo": "pilates", "diaSemana": 4, "horario": "10:00", "vagasTotais": 12, "vagasDisponiveis": 0, "ativo": true },
+  { "codigo": "danca-sex-1900", "aulaCodigo": "danca", "diaSemana": 5, "horario": "19:00", "vagasTotais": 25, "vagasDisponiveis": 15, "ativo": true },
+  { "codigo": "bike-sab-1000", "aulaCodigo": "bike-indoor", "diaSemana": 6, "horario": "10:00", "vagasTotais": 20, "vagasDisponiveis": 9, "ativo": true },
+  { "codigo": "danca-dom-1000", "aulaCodigo": "danca", "diaSemana": 0, "horario": "10:00", "vagasTotais": 25, "vagasDisponiveis": 10, "ativo": true }
+]

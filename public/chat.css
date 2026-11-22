@@ -1,0 +1,284 @@
+.chat-page {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 29rem;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  background: #f8f4e9;
+}
+
+.chat-topbar {
+  background: var(--ink);
+  color: #fff;
+  border-bottom: 3px solid var(--yellow);
+}
+
+.chat-topbar-inner {
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: 14px clamp(16px, 4vw, 56px);
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 3vw, 36px);
+}
+
+.chat-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-inline-start: clamp(14px, 3vw, 36px);
+  border-inline-start: 1px solid #484848;
+}
+
+.chat-identity h1 {
+  margin: 0;
+  color: var(--yellow);
+  font: 400 clamp(1.65rem, 3.4vw, 2.4rem) / 1.05 "Kaushan Script", cursive;
+}
+
+.chat-identity p {
+  margin: 5px 0 0;
+  font-size: .86rem;
+  color: #f0eee9;
+}
+
+.chat-avatar {
+  display: block;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--yellow);
+}
+
+.chat-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 4%;
+  transform: scale(1.65);
+  transform-origin: 50% 19%;
+}
+
+.chat-identity .chat-avatar { width: 52px; height: 52px; }
+
+.chat-back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-inline-start: auto;
+  border: 1px solid #777;
+  border-radius: 999px;
+  color: #fff;
+  padding: 7px 17px;
+  font-size: .88rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.chat-back:hover { border-color: var(--yellow); color: var(--yellow); }
+
+.chat-main {
+  width: min(100% - 40px, 1100px);
+  margin-inline: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.conversation {
+  flex: 1 1 0;
+  min-height: 8rem;
+  padding: clamp(26px, 5vw, 56px) 4px 24px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #b7ae98 transparent;
+}
+
+.messages {
+  display: grid;
+  gap: 22px;
+}
+
+.message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.message-row.user { justify-content: flex-end; }
+
+.message {
+  max-width: min(85%, 660px);
+  border: 1px solid #e2ddd0;
+  border-radius: 6px 19px 19px;
+  padding: 13px 17px;
+  background: #fff;
+  box-shadow: 0 3px 10px #29230008;
+  overflow-wrap: anywhere;
+}
+
+.message-row.user .message {
+  background: var(--yellow);
+  border-color: transparent;
+  border-radius: 19px 6px 19px 19px;
+}
+
+.message p {
+  margin: 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.message-author {
+  display: block;
+  font-weight: 800;
+  font-size: .88rem;
+  margin-bottom: 3px;
+}
+
+.message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 10px;
+  color: #665e4c;
+  margin-top: 7px;
+  font-size: .78rem;
+}
+
+.chat-dock {
+  padding: 8px 0 14px;
+  border-top: 1px solid #e1dac8;
+}
+
+.chat-progress {
+  margin: 0 0 8px;
+  color: #574f3f;
+  font-size: .875rem;
+}
+
+.chat-progress:empty { margin: 0; }
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.quick-actions button,
+.booking-close {
+  min-height: 42px;
+  padding: 6px 13px;
+  border: 1px solid #dcd4be;
+  border-radius: 999px;
+  background: #fdf9ed;
+  color: var(--ink);
+  font-size: .875rem;
+  font-weight: 700;
+}
+
+.quick-actions button:hover,
+.booking-close:hover {
+  border-color: #a58a27;
+  background: var(--cream);
+}
+
+.composer {
+  display: flex;
+  gap: 9px;
+  align-items: stretch;
+}
+
+.composer input,
+.booking-fields input,
+.booking-fields select {
+  min-width: 0;
+  min-height: 48px;
+  outline-offset: 1px;
+  border: 1px solid #cfc7b5;
+  color: var(--ink);
+  background: #fff;
+  padding: 10px 14px;
+  font: inherit;
+}
+
+.composer input { flex: 1; border-radius: 999px; }
+.composer input::placeholder { color: #6c6558; }
+
+.chat-primary {
+  min-height: 44px;
+  padding: 9px 18px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.chat-primary:hover { background: #f2c514; }
+.chat-page button:disabled { opacity: .58; cursor: default; }
+
+.chat-note {
+  margin: 9px 0 0;
+  color: #5b5344;
+  text-align: center;
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+.booking-panel {
+  background: var(--cream);
+  border: 1px solid #dbc984;
+  border-radius: 18px;
+  margin-top: 22px;
+  padding: 17px;
+}
+
+.booking-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 15px;
+}
+
+.booking-heading h2 { font-size: 1.18rem; margin: 0 0 4px; }
+.booking-heading p { line-height: 1.5; margin: 0; }
+.booking-fields { display: grid; grid-template-columns: 1fr 1.25fr 1.25fr; gap: 12px; }
+.booking-fields label { display: grid; gap: 5px; font-size: .88rem; font-weight: 700; }
+.booking-fields input, .booking-fields select { width: 100%; border-radius: 8px; font-size: 1rem; font-weight: 500; }
+.booking-status { min-height: 1.5em; margin: 8px 0; line-height: 1.5; font-size: .875rem; }
+
+@media (max-width: 640px) {
+  .chat-main { width: calc(100% - 28px); }
+  .chat-topbar-inner { padding-block: 10px; gap: 9px; }
+  .chat-identity { padding-inline-start: 9px; gap: 6px; }
+  .chat-identity .chat-avatar { width: 34px; height: 34px; }
+  .chat-identity p { display: none; }
+  .chat-back { padding-inline: 10px; font-size: .8rem; }
+  .chat-topbar .brand { font-size: 1.15rem; }
+  .chat-topbar .brand-mark { width: 24px; }
+  .message { padding: 10px 12px; }
+  .message-row { gap: 7px; }
+  .message-row .chat-avatar { width: 34px; height: 34px; }
+  .quick-actions { gap: 5px; justify-content: flex-start; }
+  .quick-actions button { padding-inline: 9px; }
+  .booking-fields { grid-template-columns: 1fr; }
+  .chat-note { text-align: start; }
+}
+
+@media (max-width: 390px) {
+  .chat-topbar-inner { padding-inline: 9px; gap: 7px; }
+  .chat-identity h1 { font-size: 1.4rem; }
+  .chat-back { padding-inline: 8px; }
+  .chat-topbar .brand > span:last-child { display: none; }
+}
