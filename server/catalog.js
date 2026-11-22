@@ -42,36 +42,58 @@ export function dataMode(env) {
   return env.MONGODB_URI?.trim() ? "atlas" : "demo";
 }
 
-async function readAtlas(env) {
+const activeRecords = {
+  $or: [{ ativo: true }, { ativa: true }],
+  ativo: { $ne: false },
+  ativa: { $ne: false },
+};
+
+async function readAtlas(env, includeSessions) {
   const { MongoClient } = await import("mongodb");
   const client = new MongoClient(env.MONGODB_URI.trim(), {
+    tls: true,
     maxPoolSize: 2,
     maxConnecting: 2,
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 5000,
   });
   try {
+    const tls = client.options;
+    if (!tls.tls || tls.tlsInsecure || tls.tlsAllowInvalidCertificates ||
+        tls.tlsAllowInvalidHostnames || tls.rejectUnauthorized === false) {
+      throw new Error("Configuração TLS do Atlas insegura.");
+    }
+
     const db = client.db(env.MONGODB_DB?.trim() || "movefit");
     const classes = db.collection("aulas")
-      .find({ ativo: true }, { projection: { _id: 0, codigo: 1, nome: 1, descricao: 1, nivel: 1, duracao: 1 } })
-      .sort({ codigo: 1 }).limit(75);
-    const sessions = db.collection("horarios")
-      .find({ ativo: true }, { projection: { _id: 0, codigo: 1, aulaCodigo: 1, diaSemana: 1, horario: 1, vagasTotais: 1, vagasDisponiveis: 1 } })
-      .sort({ diaSemana: 1, horario: 1, codigo: 1 }).limit(200);
+      .find(activeRecords, {
+        projection: { _id: 0, codigo: 1, nome: 1, descricao: 1, nivel: 1, duracao: 1, duracaoMinutos: 1 },
+        maxTimeMS: 4000,
+      })
+      .sort({ codigo: 1 }).limit(75).toArray();
+    if (!includeSessions) return [await classes, []];
 
-    return await Promise.all([classes.toArray(), sessions.toArray()]);
+    const sessions = db.collection("horarios")
+      .find(activeRecords, {
+        projection: { _id: 0, codigo: 1, aulaCodigo: 1, diaSemana: 1, horario: 1, vagasTotais: 1, vagasDisponiveis: 1 },
+        maxTimeMS: 4000,
+      })
+      .sort({ diaSemana: 1, horario: 1, codigo: 1 }).limit(200).toArray();
+
+    return await Promise.all([classes, sessions]);
   } finally {
     await client.close();
   }
 }
 
 function publicClass(record) {
+  const duration = record.duracaoMinutos ?? record.duracao;
   return {
     id: record.codigo,
     name: record.nome.trim().slice(0, 120),
     description: typeof record.descricao === "string" ? record.descricao.trim().slice(0, 240) : "",
     level: typeof record.nivel === "string" ? record.nivel.trim().slice(0, 60) : "",
-    duration: Number.isInteger(record.duracao) && record.duracao > 0 ? record.duracao : null,
+    duration: Number.isInteger(duration) && duration > 0 ? duration : null,
   };
 }
 
@@ -84,13 +106,21 @@ function validSession(record) {
     record.vagasDisponiveis <= record.vagasTotais;
 }
 
-export async function readCatalog(env) {
+export async function readCatalog(env, { atlasOnly = false, includeSessions = true } = {}) {
   const mode = dataMode(env);
-  let records = [sampleClasses, sampleSessions];
+  if (atlasOnly && mode !== "atlas") {
+    throw new RequestError(503, "MongoDB Atlas não configurado neste ambiente.");
+  }
+
+  let records = [sampleClasses, includeSessions ? sampleSessions : []];
   if (mode === "atlas") {
     try {
-      records = await readAtlas(env);
-    } catch {
+      records = await readAtlas(env, includeSessions);
+    } catch (error) {
+      let reason = "falha na configuração ou na leitura";
+      if (error?.code === 18 || error?.code === 13) reason = "autenticação ou permissão negada";
+      if (error?.name === "MongoServerSelectionError") reason = "servidor inacessível";
+      console.warn(`MoveFIT: consulta Atlas indisponível (${reason}).`);
       throw new RequestError(502, "A consulta ao catálogo está indisponível. Tente novamente em instantes.");
     }
   }

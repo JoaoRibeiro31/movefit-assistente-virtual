@@ -29,7 +29,9 @@ Preencha os valores no arquivo `.dev.vars` na raiz. Reinicie `npm run dev` depoi
 
 1. Crie uma chave no [Google AI Studio](https://aistudio.google.com/apikey).
 2. Salve-a em `GEMINI_API_KEY`. O padrão é `gemini-3.5-flash-lite`. Para trocar, defina `GEMINI_MODEL` com o identificador de um [modelo disponível](https://ai.google.dev/gemini-api/docs/models) no seu projeto.
-3. Envie uma pergunta do chat. Em caso de erro, confira a chave, a disponibilidade do modelo e a cota do projeto no AI Studio. [Guia de chaves do Gemini](https://ai.google.dev/gemini-api/docs/api-key).
+3. Envie uma pergunta livre sobre os horários de uma modalidade pelo chat. Atalhos de fatos conhecidos podem ser respondidos pelo servidor. Para verificar a chamada ao Google, confira `mode: "gemini"` na resposta de `POST /api/chat` e `dataMode: "atlas"` se quiser validar os dois serviços juntos. Em caso de erro, confira a chave, o modelo e a cota no AI Studio. [Guia de chaves do Gemini](https://ai.google.dev/gemini-api/docs/api-key).
+
+O servidor compartilha com o Gemini apenas o catálogo público normalizado e o contexto recente da conversa. O modelo retorna uma decisão estruturada. A aplicação valida a decisão e monta as respostas sobre aulas e horários a partir dos registros consultados. A chave do Google e a conexão do MongoDB ficam nas Pages Functions.
 
 ### MongoDB Atlas
 
@@ -37,9 +39,21 @@ Preencha os valores no arquivo `.dev.vars` na raiz. Reinicie `npm run dev` depoi
 2. Em **Database Access**, crie um usuário de banco com permissão `read` para `movefit`. Em **Connect → Drivers**, copie a URI, substitua os marcadores pelo usuário e pela senha e salve o valor em `MONGODB_URI`. Use `MONGODB_DB=movefit`, que também é o padrão. [Usuários de banco no Atlas](https://www.mongodb.com/docs/atlas/security-add-mongodb-users/).
 3. Em **Network Access**, autorize seu IP público para testar no computador. O acesso publicado sai da infraestrutura da Cloudflare. A lista pública de IPs da Cloudflare não corresponde à origem das conexões TCP de Workers. Se o Atlas exigir uma origem fixa e o ambiente publicado não a oferecer, valide a integração localmente até configurar uma saída autorizada. [Lista de acesso do Atlas](https://www.mongodb.com/docs/atlas/security/ip-access-list/) e [conexões TCP da Cloudflare](https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/).
 4. Para carregar os exemplos, defina `MONGODB_SEED_URI` apenas no `.dev.vars` local, com um usuário separado com permissão `readWrite` somente em `movefit`. Rode `npm run seed`. A carga insere registros de exemplo por código e preserva os registros que já têm o mesmo código. Você também pode importar [aulas](data/aulas.json) e [horários](data/horarios.json) nas respectivas coleções de teste usando o [MongoDB Compass](https://www.mongodb.com/docs/compass/import-export/).
-5. Abra `/api/catalog` na URL local. O campo `mode` deve mostrar `atlas`, com as aulas e sessões que estiverem cadastradas e ativas. Se a conexão falhar, confira a senha e o controle de rede no Atlas. Se o catálogo estiver vazio, confira o nome da base e se os documentos usam os campos dos JSONs de exemplo.
+5. Abra `/api/aulas` e `/api/horarios` na URL local ou na implantação de teste. Para confirmar a leitura real, confira `mode: "atlas"` nas duas respostas e compare um código de aula e um horário com os documentos do banco. Se a consulta falhar, confira o usuário de banco e o controle de rede no Atlas.
 
-Os horários de aula são recorrentes por dia da semana. Nos arquivos de exemplo, `diaSemana` vai de `0` (domingo) a `6` (sábado). O campo `aulaCodigo` em `horarios` corresponde ao `codigo` de uma aula. Teste com dados fictícios.
+Os horários de aula são recorrentes por dia da semana. `diaSemana` vai de `0` (domingo) a `6` (sábado) e `horario` segue `HH:MM`. `aulaCodigo` em `horarios` corresponde ao `codigo` de uma aula ativa. O backend aceita `ativo` ou `ativa` para marcar registros ativos e `duracao` ou `duracaoMinutos` para informar a duração da aula. Teste com dados fictícios.
+
+### Rotas do Atlas
+
+| Rota | Retorno |
+| --- | --- |
+| `GET /api/aulas` | `mode` e `aulas` com código, nome, descrição, nível e duração em minutos. Busca até 75 aulas ativas. |
+| `GET /api/horarios` | `mode` e `horarios` com a aula, dia da semana, hora e vagas. Busca até 200 horários ativos e vincula cada um a uma aula ativa. |
+| `GET /api/horarios?aula=funcional&data=2026-11-26` | Aplica filtros opcionais por código e data. Para a data de hoje, retorna os horários futuros no fuso de São Paulo. |
+
+As duas rotas consultam somente o Atlas. Uma lista vazia em HTTP `200` indica que a consulta terminou, mas não encontrou registros válidos para os filtros. HTTP `400` indica filtro inválido, `503` indica segredo ausente e `502` indica falha na conexão ou consulta. `/api/health` só indica a presença das variáveis. `/api/catalog` continua sendo a rota da interface e oferece dados demonstrativos quando o Atlas ainda não foi configurado.
+
+As chamadas usam o driver Node.js com TLS obrigatório e validação de certificados. As consultas são de leitura, filtram registros ativos e selecionam apenas campos públicos. Os registros de erro contêm apenas categorias gerais de falha.
 
 ## Validar a demonstração
 
@@ -58,18 +72,13 @@ A confirmação da simulação valida a data, a sessão e a disponibilidade no s
 ## Publicar pelo GitHub e Cloudflare Pages
 
 1. Em **Workers & Pages**, abra o projeto MoveFIT. Caso ainda precise conectá-lo, escolha **Pages → Connect to Git** e selecione `JoaoRibeiro31/movefit-assistente-virtual`.
-2. Configure **Production branch** como `main`, **Root directory** como a raiz do repositório e **Build output directory** como `public`. Selecione o preset **None** e deixe o comando de build em branco. O Pages encontra as rotas em `functions/` na raiz. Mantenha a instalação automática de dependências ativa e use Node.js 22 ou superior no build. O arquivo `wrangler.toml` define a compatibilidade Node.js usada pelo driver MongoDB. [Integração do Pages com Git](https://developers.cloudflare.com/pages/get-started/git-integration/) e [configuração do Wrangler](https://developers.cloudflare.com/pages/functions/wrangler-configuration/).
-3. Em **Settings → Builds & deployments**, habilite a prévia para `test`. Em **Settings → Variables and Secrets**, selecione **Preview** e cadastre `GEMINI_API_KEY` e `MONGODB_URI` como segredos quando estiverem prontas. `GEMINI_MODEL` e `MONGODB_DB` são opcionais. [Controle de branches](https://developers.cloudflare.com/pages/configuration/branch-build-controls/) e [segredos no Pages](https://developers.cloudflare.com/pages/functions/bindings/#secrets).
+2. No projeto `movefit-assistente-virtual-test`, use a raiz do repositório como **Root directory**, `public` como **Build output directory** e mantenha a instalação automática de dependências. Defina `NODE_VERSION=22`. Use o comando abaixo para compilar as funções com o Wrangler do projeto e entregar JavaScript ao Pages. O arquivo `wrangler.toml` define a compatibilidade Node.js do runtime. [Configuração do Wrangler](https://developers.cloudflare.com/pages/functions/wrangler-configuration/) e [modo avançado do Pages](https://developers.cloudflare.com/pages/functions/advanced-mode/).
+3. Em **Settings → Variables and Secrets**, use o ambiente que recebe a branch `test`. Se `test` for a **Production branch** do projeto de testes, o ambiente é **Production**. Se `test` for uma branch de prévia, use **Preview**. Cadastre `MONGODB_URI` como segredo e `MONGODB_DB` como texto com valor `movefit`. Quando for ativar o Gemini nesse ambiente, cadastre `GEMINI_API_KEY` como segredo e, se necessário, `GEMINI_MODEL`. [Controle de branches](https://developers.cloudflare.com/pages/configuration/branch-build-controls/) e [segredos no Pages](https://developers.cloudflare.com/pages/functions/bindings/#secrets).
 4. Se a prévia usar Gemini com sua chave, habilite a política do **Cloudflare Access** para limitar quem pode enviar mensagens e consumir sua cota. A prévia do Pages é pública por padrão. [Controle de acesso a prévias](https://developers.cloudflare.com/pages/configuration/preview-deployments/#customize-preview-deployments-access).
 5. Confira se está na branch `test` e revise os arquivos antes de fazer o commit. Envie apenas essa branch e acompanhe o deploy em **Deployments**. Para levar as mudanças à `main`, abra um pull request de `test` para `main` e aguarde aprovação.
 
-```powershell
-git branch --show-current
-git status --short
-git add --all
-git diff --cached --stat
-git commit -m "feat: adiciona protótipo funcional do MoveFIT"
-git push origin test
+```bash
+npx wrangler pages functions build --outdir .wrangler/pages-worker --compatibility-flag nodejs_compat --compatibility-date 2026-11-22 && cp .wrangler/pages-worker/index.js public/_worker.js
 ```
 
 Faça primeiro o deploy em modo demonstrativo para conferir as telas e as rotas. Depois, ative os serviços na prévia, refaça o deploy e repita os testes pela URL gerada pela Cloudflare. Consulte [a configuração das Pages Functions](https://developers.cloudflare.com/pages/functions/get-started/) e [o guia de conexão com MongoDB](https://developers.cloudflare.com/workers/tutorials/connect-to-mongodb-atlas/).
@@ -77,8 +86,8 @@ Faça primeiro o deploy em modo demonstrativo para conferir as telas e as rotas.
 ## Organização do código
 
 - `public/` contém as duas páginas, as imagens e o JavaScript do navegador.
-- `functions/` contém as rotas de disponibilidade, catálogo, conversa e simulação. Apenas o servidor acessa as credenciais.
-- `server/` contém as regras do chat e as integrações com Gemini e Atlas.
+- `functions/api/aulas.js` e `functions/api/horarios.js` são as rotas de leitura do Atlas. As demais rotas atendem disponibilidade, catálogo, conversa e simulação.
+- `server/catalog.js` consulta e normaliza o catálogo. `server/http.js` valida o método e padroniza erros e respostas JSON. `server/chat.js` reutiliza o catálogo para responder diretamente ou usar o Gemini.
 - `data/` contém os exemplos de aulas e horários.
 
 ## Equipe
