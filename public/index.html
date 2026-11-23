@@ -1,44 +1,124 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Protótipo acadêmico do assistente virtual MoveFIT.">
-  <title>MoveFIT | Assistente Muvinho</title>
+  <meta name="description" content="Conheça a MoveFIT, suas modalidades, planos e o assistente virtual Muvinho.">
+  <title>MoveFIT | Academia</title>
   <link rel="stylesheet" href="./style.css">
-  <script src="./app.js" defer></script>
 </head>
-<body>
-  <header class="topbar">
-    <a href="#inicio" class="brand" aria-label="MoveFIT início"><span class="brand-mark">M</span> Move<span>FIT</span></a>
-    <span class="top-label">Protótipo acadêmico</span>
+<body class="home-page">
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./" aria-label="MoveFIT, início"><span class="brand-mark" aria-hidden="true"></span><span>Move<b>FIT</b></span></a>
+      <nav aria-label="Navegação principal">
+        <a href="#inicio" aria-current="location">Início</a>
+        <a href="#modalidades">Modalidades</a>
+        <a href="#planos">Planos</a>
+        <a href="#estrutura">Estrutura</a>
+        <a href="#sobre">Sobre</a>
+      </nav>
+      <a class="button button-small" href="./chat.html">Fale com o Muvinho</a>
+    </div>
   </header>
-  <main id="inicio" class="layout">
-    <section class="intro" aria-labelledby="titulo">
-      <span class="eyebrow">SEU ASSISTENTE VIRTUAL</span>
-      <h1 id="titulo">Conheça o <span>Muvinho.</span></h1>
-      <p>Um jeito mais simples de tirar dúvidas sobre sua academia, conhecer aulas e receber orientações gerais de treino.</p>
-      <div class="avatar-panel"><img src="./assets/muvinho.webp" alt="Mascote Muvinho da MoveFIT"></div>
-      <p class="disclaimer">Este é um protótipo demonstrativo. Não realiza reservas reais nem substitui profissionais de Educação Física.</p>
+
+  <main id="conteudo">
+    <section id="inicio" class="hero" aria-labelledby="titulo">
+      <img class="hero-photo" src="./assets/academia.webp" alt="" width="1600" height="900" fetchpriority="high">
+      <div class="hero-photo-detail" aria-hidden="true">
+        <img src="./assets/atleta-banner-ajuste.png" alt="">
+      </div>
+      <div class="wrap hero-inner">
+        <div class="hero-copy">
+          <p class="section-label">Academia MoveFIT</p>
+          <h1 id="titulo">Mais saúde, energia e performance <em>para o seu dia.</em></h1>
+          <p>A MoveFIT é uma academia moderna, acessível e completa, criada para quem busca saúde, bem-estar e qualidade de vida. Nossa estrutura reúne equipamentos, modalidades e profissionais preparados para acompanhar sua evolução.</p>
+          <a class="button" href="#planos">Conheça nossos planos</a>
+        </div>
+        <aside class="hero-assistant" aria-label="Atendimento virtual">
+          <span class="muvinho-avatar" aria-hidden="true"></span>
+          <div>
+            <strong>Conheça o <span>Muvinho</span></strong>
+            <a href="./chat.html">Conversar com o Muvinho</a>
+          </div>
+        </aside>
+      </div>
     </section>
-    <section class="chat" aria-label="Chat com Muvinho">
-      <div class="chat-header"><span class="avatar-small"><img src="./assets/muvinho.webp" alt=""></span><div><strong>Muvinho</strong><small>Assistente virtual MoveFIT</small></div><span class="demo-pill">DEMO</span></div>
-      <div id="messages" class="messages" role="log" aria-live="polite" aria-relevant="additions text">
-        <div class="message assistant">Olá! Sou o Muvinho, assistente da MoveFIT. Esta é uma demonstração da interface. Como posso ajudar?</div>
+
+    <div class="highlights">
+      <ul class="wrap">
+        <li>Acompanhamento profissional</li>
+        <li>Equipamentos modernos</li>
+        <li>Ambiente climatizado</li>
+        <li>Aulas para diferentes níveis</li>
+      </ul>
+    </div>
+
+    <section class="wrap content-section" id="modalidades" aria-labelledby="modalidades-titulo">
+      <p class="section-label">Modalidades</p>
+      <h2 id="modalidades-titulo">Encontre o treino<br> ideal para você.</h2>
+      <div class="activity-grid">
+        <article><h3>Musculação</h3><p>Treinamento de força e condicionamento.</p></article>
+        <article><h3>Funcional</h3><p>Exercícios dinâmicos para condicionamento geral.</p></article>
+        <article><h3>Bike Indoor</h3><p>Atividade coletiva em bicicletas estacionárias.</p></article>
+        <article><h3>Pilates</h3><p>Exercícios de postura, controle e mobilidade.</p></article>
+        <article><h3>Dança</h3><p>Aulas com movimentos e ritmos variados.</p></article>
+        <article><h3>Lutas</h3><p>Aulas de Boxe e Muay Thai com foco em coordenação e condicionamento.</p></article>
+        <article><h3>Natação</h3><p>Aulas na piscina para adaptação à água, técnica e resistência.</p></article>
       </div>
-      <div class="quick-actions" aria-label="Perguntas de exemplo">
-        <button type="button" data-question="Quais são os horários das aulas?">Horários</button>
-        <button type="button" data-question="Como posso fazer aquecimento?">Aquecimento</button>
-        <button type="button" data-question="Quero agendar uma aula">Agendar aula</button>
-        <button type="button" data-question="Sou iniciante, quais exercícios posso fazer?">Sou iniciante</button>
+    </section>
+
+    <section class="structure-band" id="estrutura" aria-labelledby="estrutura-titulo">
+      <div class="wrap structure-inner">
+        <div>
+          <p class="section-label">Estrutura</p>
+          <h2 id="estrutura-titulo">Uma academia completa para você evoluir.</h2>
+        </div>
+        <p>Equipamentos modernos, ambiente climatizado e acompanhamento profissional para treinar no seu ritmo. Consulte a variedade de aulas e horários com o Muvinho.</p>
       </div>
-      <form id="chat-form" class="composer">
-        <label class="sr-only" for="user-input">Sua mensagem</label>
-        <input id="user-input" name="message" maxlength="500" required placeholder="Digite sua mensagem..." autocomplete="off">
-        <button type="submit" aria-label="Enviar mensagem">Enviar</button>
-      </form>
-      <p class="chat-note">Respostas simuladas para demonstrar o layout. Integração com Gemini e MongoDB pendente.</p>
+    </section>
+
+    <section class="wrap content-section" id="planos" aria-labelledby="planos-titulo">
+      <p class="section-label">Planos</p>
+      <h2 id="planos-titulo">Escolha o plano ideal para o seu momento.</h2>
+      <p class="section-intro">Valores ilustrativos para a demonstração acadêmica.</p>
+      <div class="plan-grid">
+        <article><h3>Move Basic</h3><p class="price"><span>R$</span> 99,90 <small>/ mês</small></p><p>Musculação e cardio.</p></article>
+        <article class="featured-plan"><h3>Move</h3><p class="price"><span>R$</span> 129,90 <small>/ mês</small></p><p>Musculação, cardio e aulas coletivas.</p></article>
+        <article><h3>Move Premium</h3><p class="price"><span>R$</span> 169,90 <small>/ mês</small></p><p>Acesso às modalidades e benefícios adicionais fictícios.</p></article>
+      </div>
+    </section>
+
+    <section class="about-band" id="sobre" aria-labelledby="sobre-titulo">
+      <div class="wrap about-inner">
+        <div>
+          <p class="section-label">Sobre a MoveFIT</p>
+          <h2 id="sobre-titulo">Cada pessoa tem seu ritmo.</h2>
+          <p>Na MoveFIT, acreditamos que cada pessoa possui seu próprio ritmo. Por isso, oferecemos diferentes modalidades e um ambiente acolhedor para alunos iniciantes, intermediários e avançados.</p>
+        </div>
+        <figure>
+          <blockquote>“A MoveFIT me ajudou a manter uma rotina de atividades físicas em um ambiente acolhedor.”</blockquote>
+          <figcaption>Depoimento fictício</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="wrap assistant-section" aria-labelledby="assistente-titulo">
+      <span class="muvinho-avatar" role="img" aria-label="Muvinho, mascote da MoveFIT"></span>
+      <div>
+        <h2 id="assistente-titulo">Conheça o Muvinho, seu parceiro na MoveFIT!</h2>
+        <p>Tire dúvidas, consulte horários, conheça as aulas e encontre informações para começar sua jornada.</p>
+        <a class="button" href="./chat.html">Conversar com o Muvinho</a>
+      </div>
     </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <a class="brand" href="./" aria-label="MoveFIT, início"><span class="brand-mark" aria-hidden="true"></span><span>Move<b>FIT</b></span></a>
+      <p>MoveFIT é uma academia fictícia criada para um projeto acadêmico.</p>
+    </div>
+  </footer>
 </body>
 </html>

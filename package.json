@@ -1,0 +1,19 @@
+{
+  "name": "movefit-assistente-virtual",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "wrangler pages dev public",
+    "build:pages": "wrangler pages functions build --outdir .wrangler/pages-worker --compatibility-flag nodejs_compat --compatibility-date 2026-11-22 && node scripts/package-pages-worker.mjs",
+    "test": "node --test",
+    "seed": "node --env-file-if-exists=.dev.vars scripts/seed.mjs"
+  },
+  "dependencies": {
+    "mongodb": "^7.9.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.57.0"
+  }
+}

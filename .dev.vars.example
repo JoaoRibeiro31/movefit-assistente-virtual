@@ -1,0 +1,8 @@
+# Deixe os segredos vazios para usar o modo demonstrativo.
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash-lite
+MONGODB_URI=
+MONGODB_DB=movefit
+
+# Somente local. Use antes de rodar npm run seed.
+MONGODB_SEED_URI=

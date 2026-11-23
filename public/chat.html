@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Converse com o Muvinho, assistente virtual da MoveFIT.">
+  <title>Muvinho | MoveFIT</title>
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./chat.css">
+  <script src="./app.js" defer></script>
+</head>
+<body class="chat-page">
+  <a class="skip-link" href="#chat-main">Ir para a conversa</a>
+  <header class="chat-topbar">
+    <div class="chat-topbar-inner">
+      <a class="brand" href="./" aria-label="MoveFIT, início"><span class="brand-mark" aria-hidden="true"></span><span>Move<b>FIT</b></span></a>
+      <div class="chat-identity">
+        <span class="chat-avatar muvinho-avatar" aria-hidden="true"></span>
+        <div>
+          <h1>Muvinho</h1>
+          <p>Assistente virtual da MoveFIT</p>
+        </div>
+      </div>
+      <a class="chat-back" href="./">Voltar ao site</a>
+    </div>
+  </header>
+
+  <main class="chat-main" id="chat-main" tabindex="-1">
+    <div class="conversation" id="conversation" tabindex="0" aria-label="Área da conversa">
+      <div class="messages" id="messages" role="log" aria-label="Mensagens" aria-relevant="additions">
+        <div class="message-row assistant">
+          <span class="chat-avatar muvinho-avatar" aria-hidden="true"></span>
+          <div class="message">
+            <span class="message-author">Muvinho</span>
+            <p>Oi! Sou o Muvinho, assistente virtual da MoveFIT. Como posso te ajudar hoje?</p>
+          </div>
+        </div>
+      </div>
+
+      <section class="booking-panel" id="booking" aria-labelledby="booking-title" hidden>
+        <div class="booking-heading">
+          <div>
+            <h2 id="booking-title" tabindex="-1">Agendar aula</h2>
+            <p id="booking-description">Escolha uma data, uma modalidade e um horário.</p>
+          </div>
+          <button class="booking-close" type="button" id="close-booking">Fechar</button>
+        </div>
+        <form id="booking-form">
+          <div class="booking-fields">
+            <label for="booking-date">Data
+              <input type="date" id="booking-date" required>
+            </label>
+            <label for="booking-class">Modalidade
+              <select id="booking-class" required disabled></select>
+            </label>
+            <label for="booking-session">Horário
+              <select id="booking-session" aria-describedby="booking-status" required disabled></select>
+            </label>
+          </div>
+          <p class="booking-status" id="booking-status" role="status"></p>
+          <button type="submit" class="chat-primary" id="booking-confirm" disabled>Confirmar reserva</button>
+        </form>
+      </section>
+    </div>
+
+    <div class="chat-dock">
+      <p class="chat-progress" id="chat-progress" role="status"></p>
+      <div class="quick-actions" aria-label="Ações rápidas">
+        <button type="button" data-action="hours" data-question="Quais são os horários da academia?">Horários</button>
+        <button type="button" data-action="classes" data-question="Quais aulas a MoveFIT oferece?">Aulas</button>
+        <button type="button" data-action="schedule" id="schedule-action">Agendar aula</button>
+        <button type="button" data-action="workout" data-question="Pode sugerir como organizar uma rotina geral de treinos?">Sugestões de treino</button>
+        <button type="button" data-action="warmup" data-question="Como posso me aquecer antes do treino?">Aquecimento</button>
+        <button type="button" data-action="faq" data-question="Quais são as dúvidas frequentes sobre a MoveFIT?">Dúvidas frequentes</button>
+      </div>
+      <form id="chat-form" class="composer" method="post">
+        <label class="sr-only" for="user-input">Sua mensagem</label>
+        <input id="user-input" name="message" type="text" maxlength="500" required placeholder="Digite sua mensagem..." autocomplete="off" disabled>
+        <button type="submit" class="chat-primary" id="send-message" disabled>Enviar</button>
+      </form>
+      <p class="chat-note">Use dados fictícios nesta demonstração. As orientações são gerais e a avaliação individual cabe a um profissional de Educação Física.</p>
+      <noscript><p class="chat-note">Ative o JavaScript no navegador para conversar com o Muvinho.</p></noscript>
+    </div>
+  </main>
+</body>
+</html>
