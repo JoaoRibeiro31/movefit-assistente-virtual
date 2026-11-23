@@ -38,6 +38,7 @@ test("o catálogo lista modalidades e sessões da data consultada, incluindo a l
   assert.ok(result.body.classes.some(item => item.name === "Bike Indoor"));
   assert.deepEqual(result.body.sessions.map(({ id, available }) => [id, available]), [
     ["pilates-qui-1000", 0], ["funcional-qui-1800", 10],
+    ["bike-qui-1900", 14], ["muay-thai-qui-1900", 12],
   ]);
   assert.equal((await call(catalog, { query: "?date=2029-02-30" })).status, 400);
 });

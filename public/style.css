@@ -85,27 +85,42 @@ button { cursor: pointer; }
 .button:hover { background: #ffe46d; }
 .button-small { border-radius: 2rem; min-height: 42px; padding: .6rem 1.05rem; font-size: .88rem; }
 
-.hero { color: #fff; background: #000; }
+.hero {
+  --hero-photo-x: 64%;
+  --hero-photo-y: 42%;
+  position: relative;
+  isolation: isolate;
+  color: #fff;
+  background: #1c1915;
+}
+.hero-photo, .hero-photo-detail, .hero::after { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-photo { object-fit: cover; object-position: var(--hero-photo-x) var(--hero-photo-y); z-index: -2; }
+.hero-photo-detail { container-type: size; overflow: hidden; z-index: -2; }
+.hero-photo-detail img {
+  /* Match the original 16:9 cover crop, then reveal just the clothing edit. */
+  position: absolute;
+  left: var(--hero-photo-x);
+  top: var(--hero-photo-y);
+  width: max(100cqw, 177.778cqh);
+  height: max(56.25cqw, 100cqh);
+  max-width: none;
+  translate: calc(-1 * var(--hero-photo-x)) calc(-1 * var(--hero-photo-y));
+  mask-image: radial-gradient(ellipse 10% 16% at 75.8% 42%, #000 72%, transparent 100%);
+}
+.hero::after {
+  content: "";
+  background: linear-gradient(90deg, #111 0%, #111f 16%, #111c 35%, #1112 74%);
+  z-index: -1;
+}
 .hero-inner {
   min-height: clamp(490px, 43vw, 635px);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, .9fr);
-  grid-template-areas: "copy portrait" "assistant portrait";
-  grid-template-rows: 1fr auto;
-  align-items: center;
-  gap: 1.5rem clamp(1.5rem, 4vw, 4rem);
-  padding-top: clamp(2.25rem, 5vw, 4.5rem);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: clamp(3.25rem, 6vw, 6.25rem) 2.7rem;
 }
-.hero-copy { grid-area: copy; max-width: 620px; }
-.hero-photo {
-  grid-area: portrait;
-  align-self: end;
-  width: 100%;
-  height: auto;
-  max-height: clamp(440px, 42vw, 560px);
-  object-fit: contain;
-  object-position: center bottom;
-}
+.hero-copy { max-width: 620px; align-self: center; }
 .section-label {
   display: flex;
   align-items: center;
@@ -122,8 +137,7 @@ button { cursor: pointer; }
 .hero h1 em { display: block; color: var(--yellow); font-style: normal; }
 .hero-copy > p:not(.section-label) { max-width: 480px; margin: 1.25rem 0 1.65rem; line-height: 1.6; color: #f1eee8; }
 .hero-assistant {
-  grid-area: assistant;
-  justify-self: start;
+  align-self: flex-end;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -132,7 +146,6 @@ button { cursor: pointer; }
   background: var(--cream);
   color: var(--ink);
   border-radius: .9rem;
-  margin-bottom: 2.25rem;
 }
 .muvinho-avatar {
   display: block;
@@ -189,20 +202,18 @@ button { cursor: pointer; }
 @media (max-width: 950px) {
   .header-inner { flex-wrap: wrap; gap: .75rem 1rem; padding-block: .85rem; }
   .site-header nav { order: 3; width: 100%; flex-wrap: wrap; }
+  .hero-inner { align-items: flex-start; flex-direction: column; }
+  .hero-copy { align-self: flex-start; }
+  .hero-assistant { align-self: flex-start; }
 }
 @media (max-width: 640px) {
   .wrap { width: calc(100% - 2rem); }
   .site-header nav { gap: .55rem 1rem; }
   .site-header nav a { padding: .35rem 0; }
+  .hero { --hero-photo-x: 67%; --hero-photo-y: 50%; }
+  .hero::after { background: linear-gradient(95deg, #111f, #111c 62%, #1117); }
   .hero h1 { font-size: clamp(2.3rem, 9vw, 3.65rem); }
-  .hero-inner {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "copy" "portrait" "assistant";
-    grid-template-rows: auto;
-    gap: 1.2rem;
-  }
-  .hero-photo { max-height: min(75vw, 360px); }
-  .hero-assistant { margin-bottom: 1.25rem; }
+  .hero-inner { gap: 1.2rem; }
   .highlights ul { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
   .highlights li + li { border: 0; padding-left: 0; }
   .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }

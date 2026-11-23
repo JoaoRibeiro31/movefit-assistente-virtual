@@ -1,8 +1,10 @@
 [
-  { "codigo": "musculacao", "nome": "Musculação", "descricao": "Treinamento de força e condicionamento.", "nivel": "Todos os níveis", "duracao": null, "ativo": true },
+  { "codigo": "musculacao", "nome": "Musculação", "descricao": "Treinamento de força e condicionamento.", "nivel": "Todos os níveis", "duracao": 50, "ativo": true },
   { "codigo": "funcional", "nome": "Funcional", "descricao": "Exercícios dinâmicos para condicionamento geral.", "nivel": "Todos os níveis", "duracao": 50, "ativo": true },
   { "codigo": "bike-indoor", "nome": "Bike Indoor", "descricao": "Atividade coletiva com bicicletas estacionárias.", "nivel": "Todos os níveis", "duracao": 45, "ativo": true },
   { "codigo": "pilates", "nome": "Pilates", "descricao": "Exercícios de postura, controle e mobilidade.", "nivel": "Todos os níveis", "duracao": 50, "ativo": true },
   { "codigo": "danca", "nome": "Dança", "descricao": "Aulas com movimentos e ritmos variados.", "nivel": "Todos os níveis", "duracao": 60, "ativo": true },
-  { "codigo": "lutas", "nome": "Lutas", "descricao": "Atividades de técnica e condicionamento.", "nivel": "Todos os níveis", "duracao": null, "ativo": true }
+  { "codigo": "boxe", "nome": "Boxe", "descricao": "Aulas de boxe com foco em técnica e condicionamento.", "nivel": "Todos os níveis", "duracao": 50, "ativo": true },
+  { "codigo": "muay-thai", "nome": "Muay Thai", "descricao": "Aulas de Muay Thai com foco em técnica e condicionamento.", "nivel": "Todos os níveis", "duracao": 50, "ativo": true },
+  { "codigo": "natacao", "nome": "Natação", "descricao": "Aulas de natação com orientação para diferentes níveis.", "nivel": "Todos os níveis", "duracao": 45, "ativo": true }
 ]
