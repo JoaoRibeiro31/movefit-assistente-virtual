@@ -56,6 +56,48 @@ test("aquecimento e treino recebem exemplos gerais, e dor interrompe a orientaç
   assert.equal(healthResult.body.nextAction, undefined);
 });
 
+test("o chat pede nível e objetivo e usa a resposta para dar exemplos práticos", async () => {
+  const question = "Quero uma sugestão de treino.";
+  const first = await call(chat, { payload: { message: question } });
+  assert.match(first.body.reply, /começando ou já treina regularmente/);
+  assert.match(first.body.reply, /força, condicionamento ou mobilidade/);
+
+  const followUp = await call(chat, {
+    payload: {
+      message: "Sou iniciante e quero melhorar o fôlego.",
+      history: [{ role: "user", text: question }, { role: "assistant", text: first.body.reply }],
+    },
+  });
+  assert.match(followUp.body.reply, /caminhada, bicicleta ergométrica ou dança/);
+  assert.match(followUp.body.reply, /começando/);
+});
+
+test("uma lesão mencionada antes impede exemplos de treino na continuação", async () => {
+  const result = await call(chat, {
+    payload: {
+      message: "Tem exercícios para fortalecer?",
+      history: [{ role: "user", text: "Estou me recuperando de uma lesão." }],
+    },
+  });
+  assert.match(result.body.reply, /profissional/);
+  assert.doesNotMatch(result.body.reply, /cadeira firme|flexão/);
+});
+
+test("a intenção de treino do Gemini usa os exemplos gerais validados pelo servidor", async t => {
+  t.mock.method(globalThis, "fetch", async () => Response.json({
+    candidates: [{ content: { parts: [{ text: JSON.stringify({
+      intent: "workout", classId: "", date: "", reply: "Faça 150 flexões diárias.",
+    }) }] } }],
+  }));
+  const result = await call(chat, {
+    env: { GEMINI_API_KEY: "fake-test-key" },
+    payload: { message: "Quero exercícios de força, já treino regularmente." },
+  });
+  assert.equal(result.body.mode, "gemini");
+  assert.match(result.body.reply, /remada no aparelho, leg press e supino em máquina/);
+  assert.doesNotMatch(result.body.reply, /150 flexões/);
+});
+
 test("a simulação exige confirmação, dia correto e vaga, sem alterar a disponibilidade", async () => {
   const booking = await call(chat, { payload: { message: "Quero agendar Pilates." } });
   assert.equal(booking.body.nextAction, "schedule");

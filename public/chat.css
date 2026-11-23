@@ -44,26 +44,11 @@
 }
 
 .chat-avatar {
-  display: block;
-  flex: none;
   width: 42px;
   height: 42px;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--yellow);
 }
 
-.chat-avatar img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 4%;
-  transform: scale(1.65);
-  transform-origin: 50% 19%;
-}
-
-.chat-identity .chat-avatar { width: 52px; height: 52px; }
+.chat-identity .chat-avatar { width: 52px; height: 52px; border-color: var(--yellow); }
 
 .chat-back {
   display: inline-flex;

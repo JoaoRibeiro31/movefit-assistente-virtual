@@ -1,6 +1,6 @@
 # MoveFIT
 
-Protótipo acadêmico de Análise e Desenvolvimento de Sistemas. A página inicial apresenta uma academia fictícia. O Muvinho atende visitantes, consulta aulas e horários e conduz uma simulação de agendamento.
+Protótipo acadêmico de Análise e Desenvolvimento de Sistemas. A página inicial apresenta uma academia fictícia. O Muvinho consulta aulas e horários, conduz agendamentos e oferece exemplos gerais de treino e aquecimento.
 
 ## Executar no computador
 
@@ -36,7 +36,7 @@ O servidor compartilha com o Gemini apenas o catálogo público normalizado e o 
 ### MongoDB Atlas
 
 1. Abra ou crie o cluster `movefit-cluster`. Crie a base `movefit` com as coleções `aulas` e `horarios`, ou deixe a carga inicial criá-las.
-2. Em **Database Access**, crie um usuário de banco com permissão `read` para `movefit`. Em **Connect → Drivers**, copie a URI, substitua os marcadores pelo usuário e pela senha e salve o valor em `MONGODB_URI`. Use `MONGODB_DB=movefit`, que também é o padrão. [Usuários de banco no Atlas](https://www.mongodb.com/docs/atlas/security-add-mongodb-users/).
+2. Em **Database Access**, use um usuário de banco restrito ao cluster do MoveFIT. A aplicação precisa ler `movefit.aulas` e `movefit.horarios` e ler, inserir e atualizar documentos em `movefit.reservas`. Se usar uma função personalizada, crie a coleção `reservas` no Atlas antes da primeira reserva. Em **Connect → Drivers**, copie a URI, substitua os marcadores pelo usuário e pela senha e salve o valor em `MONGODB_URI`. Use `MONGODB_DB=movefit`, que também é o padrão. [Usuários de banco no Atlas](https://www.mongodb.com/docs/atlas/security-add-mongodb-users/).
 3. Em **Network Access**, autorize seu IP público para testar no computador. O acesso publicado sai da infraestrutura da Cloudflare. A lista pública de IPs da Cloudflare não corresponde à origem das conexões TCP de Workers. Se o Atlas exigir uma origem fixa e o ambiente publicado não a oferecer, valide a integração localmente até configurar uma saída autorizada. [Lista de acesso do Atlas](https://www.mongodb.com/docs/atlas/security/ip-access-list/) e [conexões TCP da Cloudflare](https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/).
 4. Para carregar os exemplos, defina `MONGODB_SEED_URI` apenas no `.dev.vars` local, com um usuário separado com permissão `readWrite` somente em `movefit`. Rode `npm run seed`. A carga insere registros de exemplo por código e preserva os registros que já têm o mesmo código. Você também pode importar [aulas](data/aulas.json) e [horários](data/horarios.json) nas respectivas coleções de teste usando o [MongoDB Compass](https://www.mongodb.com/docs/compass/import-export/).
 5. Abra `/api/aulas` e `/api/horarios` na URL local ou na implantação de teste. Para confirmar a leitura real, confira `mode: "atlas"` nas duas respostas e compare um código de aula e um horário com os documentos do banco. Se a consulta falhar, confira o usuário de banco e o controle de rede no Atlas.
@@ -49,11 +49,15 @@ Os horários de aula são recorrentes por dia da semana. `diaSemana` vai de `0` 
 | --- | --- |
 | `GET /api/aulas` | `mode` e `aulas` com código, nome, descrição, nível e duração em minutos. Busca até 75 aulas ativas. |
 | `GET /api/horarios` | `mode` e `horarios` com a aula, dia da semana, hora e vagas. Busca até 200 horários ativos e vincula cada um a uma aula ativa. |
-| `GET /api/horarios?aula=funcional&data=2026-11-26` | Aplica filtros opcionais por código e data. Para a data de hoje, retorna os horários futuros no fuso de São Paulo. |
+| `GET /api/horarios?aula=funcional&data=2026-11-26` | Aplica filtros opcionais por código e data. Com data, desconta as reservas daquela sessão. Para hoje, retorna os horários futuros no fuso de São Paulo. Sem data, `vagasDisponiveis` é o valor base do horário semanal. |
+| `GET /api/catalog?date=2026-11-26` | Inicializa o visitante e lista as sessões e vagas para a data escolhida. |
+| `POST /api/reservas` | Recebe `date`, `sessionId` e `confirmed: true`. Usa o cookie de visitante criado pelo catálogo. Retorna HTTP `201` com comprovante após a gravação e `409` se a sessão estiver lotada ou já reservada pelo visitante. |
 
-As duas rotas consultam somente o Atlas. Uma lista vazia em HTTP `200` indica que a consulta terminou, mas não encontrou registros válidos para os filtros. HTTP `400` indica filtro inválido, `503` indica segredo ausente e `502` indica falha na conexão ou consulta. `/api/health` só indica a presença das variáveis. `/api/catalog` continua sendo a rota da interface e oferece dados demonstrativos quando o Atlas ainda não foi configurado.
+`/api/aulas`, `/api/horarios` e `/api/reservas` dependem do Atlas. Uma lista vazia em HTTP `200` indica que a consulta terminou sem encontrar registros válidos para os filtros. HTTP `400` indica solicitação inválida, `503` indica segredo ausente e `502` indica falha no Atlas. `/api/health` indica a presença das variáveis. Sem Atlas, `/api/catalog` usa dados demonstrativos e a confirmação é simulada.
 
-As chamadas usam o driver Node.js com TLS obrigatório e validação de certificados. As consultas são de leitura, filtram registros ativos e selecionam apenas campos públicos. Os registros de erro contêm apenas categorias gerais de falha.
+As chamadas usam o driver Node.js com TLS obrigatório e validação de certificados. Para cada combinação de data e horário, a coleção `reservas` usa um único documento. O Atlas verifica a vaga e a duplicidade no mesmo comando que registra a reserva. A disponibilidade de outras datas continua independente. Os registros de erro contêm apenas categorias gerais de falha.
+
+O agendamento acadêmico identifica o visitante por um cookie do navegador e guarda somente o hash do identificador, o código da reserva e os dados da sessão. Não há cadastro pessoal ou cancelamento neste fluxo. A deduplicação vale para o mesmo navegador enquanto o cookie estiver ativo. Para oferecer reservas pessoais com consulta e cancelamento, use uma conta autenticada.
 
 ## Validar a demonstração
 
@@ -65,9 +69,9 @@ Execute `npm test` para rodar os testes do backend. Na interface, confira estes 
 | Aulas | Use **Aulas** e confira as modalidades exibidas. Com Atlas configurado, compare o resultado com a coleção `aulas`. |
 | Dúvidas frequentes | Use o atalho correspondente ou pergunte por um plano. Confira se a resposta trata o conteúdo como ilustrativo. |
 | Orientações gerais | Use **Aquecimento** e **Sugestões de treino**. Experimente uma pergunta sobre dor ou restrição e verifique se a resposta encaminha para avaliação profissional. |
-| Agendamento | Use **Agendar aula**, selecione uma data futura e uma sessão com vaga e confirme. Confira o aviso de simulação. Na base de exemplo, o Pilates de quinta-feira às 10h está lotado e deve ficar indisponível para seleção. |
+| Agendamento | Use **Agendar aula**, selecione uma data futura e uma sessão com vaga e confirme. Com Atlas, confira o comprovante e a vaga consumida ao reabrir o painel. Tente o mesmo horário pelo mesmo navegador e verifique o bloqueio. Sem Atlas, confira o aviso de simulação. |
 
-A confirmação da simulação valida a data, a sessão e a disponibilidade no servidor. O fluxo acadêmico não cria reservas. A conversa fica em memória enquanto a página está aberta, e o servidor envia o contexto recente ao Gemini quando a integração está ativa.
+A conversa fica em memória enquanto a página está aberta, e o servidor envia o contexto recente ao Gemini quando a integração está ativa. A confirmação passa pelo formulário e pelo servidor. As mensagens do chat não gravam reservas.
 
 ## Publicar pelo GitHub e Cloudflare Pages
 
@@ -88,8 +92,8 @@ Faça primeiro o deploy em modo demonstrativo para conferir as telas e as rotas.
 ## Organização do código
 
 - `public/` contém as duas páginas, as imagens e o JavaScript do navegador.
-- `functions/api/aulas.js` e `functions/api/horarios.js` são as rotas de leitura do Atlas. As demais rotas atendem disponibilidade, catálogo, conversa e simulação.
-- `server/catalog.js` consulta e normaliza o catálogo. `server/http.js` valida o método e padroniza erros e respostas JSON. `server/chat.js` reutiliza o catálogo para responder diretamente ou usar o Gemini.
+- `functions/api/aulas.js` e `functions/api/horarios.js` consultam o Atlas. `functions/api/reservas.js` confirma o agendamento por meio de `server/reservations.js`.
+- `server/catalog.js` normaliza o catálogo e calcula vagas por data. `server/atlas.js` padroniza a conexão com o Atlas. `server/http.js` valida pedidos e padroniza respostas JSON. `server/chat.js` usa o catálogo e o Gemini para atender o visitante.
 - `data/` contém os exemplos de aulas e horários.
 
 ## Equipe

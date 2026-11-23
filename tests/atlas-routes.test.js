@@ -27,6 +27,11 @@ test("aulas e horários retornam campos públicos e usam apenas as coleções es
       collection(collection) {
         queried.push(collection);
         return {
+          aggregate(pipeline) {
+            assert.equal(collection, "reservas");
+            assert.deepEqual(pipeline[0], { $match: { _id: { $in: ["2099-11-26:H01"] } } });
+            return { toArray: async () => [] };
+          },
           find(filter, { projection }) {
             assert.deepEqual(filter.$or, [{ ativo: true }, { ativa: true }]);
             assert.equal(projection._id, 0);
@@ -50,7 +55,7 @@ test("aulas e horários retornam campos públicos e usam apenas as coleções es
     codigo: "H01", aulaCodigo: "AULA001", aulaNome: "Funcional", diaSemana: 4,
     horario: "18:00", vagasTotais: 15, vagasDisponiveis: 0,
   }]);
-  assert.deepEqual(queried, ["aulas", "aulas", "horarios"]);
+  assert.deepEqual(queried, ["aulas", "aulas", "horarios", "reservas"]);
 });
 
 test("rotas Atlas validam entradas e falham sem exibir dados de exemplo ou detalhes da conexão", async t => {

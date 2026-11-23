@@ -1,4 +1,4 @@
-import { parseDate, readCatalog, sessionsOnDate, validCode } from "../../server/catalog.js";
+import { availableSessionsOnDate, parseDate, readCatalog, validCode } from "../../server/catalog.js";
 import { endpoint, RequestError } from "../../server/http.js";
 
 export const onRequest = endpoint("GET", async ({ request, env }) => {
@@ -12,7 +12,7 @@ export const onRequest = endpoint("GET", async ({ request, env }) => {
   const dia = data === null ? null : parseDate(data).getUTCDay();
 
   const catalog = await readCatalog(env, { atlasOnly: true });
-  const sessions = data === null ? catalog.sessions : sessionsOnDate(catalog, data);
+  const sessions = data === null ? catalog.sessions : await availableSessionsOnDate(env, catalog, data);
 
   return {
     mode: catalog.mode,

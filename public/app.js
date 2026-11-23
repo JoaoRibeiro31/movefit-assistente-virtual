@@ -9,6 +9,7 @@ const scheduleAction = document.querySelector('#schedule-action');
 
 const booking = document.querySelector('#booking');
 const bookingTitle = document.querySelector('#booking-title');
+const bookingDescription = document.querySelector('#booking-description');
 const bookingForm = document.querySelector('#booking-form');
 const bookingDate = document.querySelector('#booking-date');
 const bookingClass = document.querySelector('#booking-class');
@@ -39,11 +40,8 @@ function appendMessage(text, role, source = '') {
 
   if (role === 'assistant') {
     const avatar = document.createElement('span');
-    avatar.className = 'chat-avatar';
-    const image = document.createElement('img');
-    image.src = './assets/muvinho.webp';
-    image.alt = '';
-    avatar.append(image);
+    avatar.className = 'chat-avatar muvinho-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
     row.append(avatar);
   }
 
@@ -137,6 +135,15 @@ function resetSelect(select, label) {
   select.replaceChildren(option);
 }
 
+function updateBookingCopy(mode) {
+  const demo = mode === 'demo';
+  bookingTitle.textContent = demo ? 'Simular agendamento' : 'Agendar aula';
+  bookingDescription.textContent = demo
+    ? 'Escolha uma data, uma modalidade e um horário para testar o atendimento.'
+    : 'Escolha uma data, uma modalidade e um horário.';
+  bookingConfirm.textContent = demo ? 'Confirmar simulação' : 'Confirmar reserva';
+}
+
 function showSessions() {
   resetSelect(bookingSession, 'Escolha um horário');
   bookingSession.disabled = true;
@@ -158,7 +165,9 @@ function showSessions() {
   bookingSession.disabled = !sessions.some(session => session.available > 0);
   bookingStatus.textContent = bookingSession.disabled
     ? 'Todas as sessões dessa modalidade estão lotadas na data escolhida.'
-    : 'A confirmação conclui a simulação sem ocupar uma vaga.';
+    : catalog.mode === 'atlas'
+      ? 'A confirmação registra a reserva e ocupa uma vaga nessa data.'
+      : 'A confirmação conclui a simulação sem ocupar uma vaga.';
 }
 
 async function loadCatalog() {
@@ -179,8 +188,9 @@ async function loadCatalog() {
   try {
     const result = await requestJSON(`/api/catalog?date=${encodeURIComponent(bookingDate.value)}`, { signal: controller.signal });
     if (controller.signal.aborted) return;
-    if (!Array.isArray(result.classes) || !Array.isArray(result.sessions)) throw new Error();
+    if (!['atlas', 'demo'].includes(result.mode) || !Array.isArray(result.classes) || !Array.isArray(result.sessions)) throw new Error();
     catalog = result;
+    updateBookingCopy(result.mode);
     for (const item of catalog.classes) bookingClass.add(new Option(item.name, item.id));
     bookingClass.disabled = catalog.classes.length === 0;
     bookingStatus.textContent = bookingClass.disabled
@@ -192,13 +202,14 @@ async function loadCatalog() {
     }
   } catch (error) {
     if (!controller.signal.aborted) {
-      bookingStatus.textContent = error.status ? error.message : 'Não consegui consultar as aulas. Feche e abra a simulação para tentar novamente.';
+      bookingStatus.textContent = error.status ? error.message : 'Não consegui consultar as aulas. Feche e abra o agendamento para tentar novamente.';
     }
   }
 }
 
 function openBooking(focusHeading = true) {
   booking.hidden = false;
+  updateBookingCopy(catalog?.mode);
   bookingDate.min = today();
   if (!bookingDate.value || bookingDate.value < bookingDate.min) bookingDate.value = bookingDate.min;
   if (focusHeading) bookingTitle.focus();
@@ -214,20 +225,28 @@ function closeBooking(restoreFocus = true) {
 bookingForm.addEventListener('submit', async event => {
   event.preventDefault();
   if (bookingBusy || chatBusy || !catalog || !bookingSession.value || !bookingDate.validity.valid) return;
+  const reserve = catalog.mode === 'atlas';
   bookingBusy = true;
   const fields = [bookingDate, bookingClass, bookingSession, bookingConfirm, bookingClose, sendButton, ...quickButtons];
   fields.forEach(field => { field.disabled = true; });
-  bookingStatus.textContent = 'Conferindo os dados da simulação…';
+  bookingStatus.textContent = reserve ? 'Registrando a reserva…' : 'Conferindo os dados da simulação…';
 
   try {
-    const result = await postJSON('/api/simulate', { date: bookingDate.value, sessionId: bookingSession.value, confirmed: true });
-    if (result.simulated !== true || typeof result.reply !== 'string') throw new Error();
+    const result = await postJSON(reserve ? '/api/reservas' : '/api/simulate', {
+      date: bookingDate.value,
+      sessionId: bookingSession.value,
+      confirmed: true,
+    });
+    const succeeded = reserve ? result.reserved === true && typeof result.booking?.code === 'string' : result.simulated === true;
+    if (!succeeded || typeof result.reply !== 'string' || !result.reply.trim()) throw new Error();
     closeBooking(false);
-    appendMessage(result.reply, 'assistant', 'Simulação de agendamento');
+    appendMessage(result.reply, 'assistant', reserve ? 'Reserva registrada' : 'Simulação de agendamento');
     messageInput.focus();
   } catch (error) {
     await loadCatalog();
-    bookingStatus.textContent = error.status ? error.message : 'Não consegui concluir a simulação. Tente novamente.';
+    bookingStatus.textContent = error.status ? error.message : reserve
+      ? 'Não consegui confirmar se a reserva foi registrada. Tente novamente.'
+      : 'Não consegui concluir a simulação. Tente novamente.';
   } finally {
     bookingBusy = false;
     bookingDate.disabled = false;

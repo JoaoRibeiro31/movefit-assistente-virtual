@@ -15,7 +15,7 @@
     <div class="chat-topbar-inner">
       <a class="brand" href="./" aria-label="MoveFIT, início"><span class="brand-mark" aria-hidden="true"></span><span>Move<b>FIT</b></span></a>
       <div class="chat-identity">
-        <span class="chat-avatar"><img src="./assets/muvinho.webp" alt=""></span>
+        <span class="chat-avatar muvinho-avatar" aria-hidden="true"></span>
         <div>
           <h1>Muvinho</h1>
           <p>Assistente virtual da MoveFIT</p>
@@ -29,7 +29,7 @@
     <div class="conversation" id="conversation" tabindex="0" aria-label="Área da conversa">
       <div class="messages" id="messages" role="log" aria-label="Mensagens" aria-relevant="additions">
         <div class="message-row assistant">
-          <span class="chat-avatar"><img src="./assets/muvinho.webp" alt=""></span>
+          <span class="chat-avatar muvinho-avatar" aria-hidden="true"></span>
           <div class="message">
             <span class="message-author">Muvinho</span>
             <p>Oi! Sou o Muvinho, assistente virtual da MoveFIT. Como posso te ajudar hoje?</p>
@@ -40,8 +40,8 @@
       <section class="booking-panel" id="booking" aria-labelledby="booking-title" hidden>
         <div class="booking-heading">
           <div>
-            <h2 id="booking-title" tabindex="-1">Simular agendamento</h2>
-            <p>Escolha uma data, uma modalidade e um horário para testar o atendimento.</p>
+            <h2 id="booking-title" tabindex="-1">Agendar aula</h2>
+            <p id="booking-description">Escolha uma data, uma modalidade e um horário.</p>
           </div>
           <button class="booking-close" type="button" id="close-booking">Fechar</button>
         </div>
@@ -58,7 +58,7 @@
             </label>
           </div>
           <p class="booking-status" id="booking-status" role="status"></p>
-          <button type="submit" class="chat-primary" id="booking-confirm" disabled>Confirmar simulação</button>
+          <button type="submit" class="chat-primary" id="booking-confirm" disabled>Confirmar reserva</button>
         </form>
       </section>
     </div>

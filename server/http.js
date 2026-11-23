@@ -23,7 +23,8 @@ export function endpoint(method, handler) {
     }
 
     try {
-      return json(await handler(context));
+      const result = await handler(context);
+      return result instanceof Response ? result : json(result);
     } catch (error) {
       if (error instanceof RequestError) return json({ error: error.message }, error.status);
       // Mensagens e exceções externas podem conter segredos ou texto de visitantes.

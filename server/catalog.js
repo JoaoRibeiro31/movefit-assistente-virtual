@@ -1,6 +1,8 @@
 import sampleClasses from "../data/aulas.json" with { type: "json" };
 import sampleSessions from "../data/horarios.json" with { type: "json" };
 import { RequestError } from "./http.js";
+import { withAtlas } from "./atlas.js";
+import { countReservations } from "./reservations.js";
 
 export const hours = [
   { days: "Segunda a sexta", opens: "06:00", closes: "23:00" },
@@ -48,42 +50,11 @@ const activeRecords = {
   ativa: { $ne: false },
 };
 
-function atlasFailureReason(error) {
-  const serverErrors = Array.from(error?.reason?.servers?.values?.() ?? [], server => server.error);
-  const errors = [error, ...serverErrors].flatMap(item => [item, item?.cause, item?.cause?.cause]);
-
-  // Keep driver messages, connection strings, and server addresses out of the logs.
-  if (errors.some(item => item?.code === 13 || item?.code === 18 ||
-    (item?.code === 8000 && /authenticat|not allowed|not authorized/i.test(item.message ?? "")))) {
-    return "autenticação ou permissão negada";
-  }
-  if (errors.some(item => ["ENOTFOUND", "ENODATA", "EAI_AGAIN"].includes(item?.code) ||
-    /^query(?:Srv|Txt)$/.test(item?.syscall ?? ""))) return "falha de DNS";
-  if (errors.some(item => /^(?:ERR_TLS_|ERR_SSL_|CERT_|UNABLE_TO_VERIFY_|DEPTH_ZERO_SELF_SIGNED_CERT)/
-    .test(String(item?.code ?? "")))) return "falha de TLS";
-  if (errors.some(item => ["ECONNREFUSED", "ECONNRESET", "EHOSTUNREACH", "ENETUNREACH", "ETIMEDOUT"]
-    .includes(item?.code))) return "falha na conexão TCP";
-  if (error?.name === "MongoServerSelectionError") return "servidor inacessível";
-  return "falha na configuração ou na leitura";
-}
-
 async function readAtlas(env, includeSessions) {
-  const { MongoClient } = await import("mongodb");
-  const client = new MongoClient(env.MONGODB_URI.trim(), {
-    tls: true,
-    maxPoolSize: 2,
-    maxConnecting: 2,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 5000,
-  });
-  try {
-    const tls = client.options;
-    if (!tls.tls || tls.tlsInsecure || tls.tlsAllowInvalidCertificates ||
-        tls.tlsAllowInvalidHostnames || tls.rejectUnauthorized === false) {
-      throw new Error("Configuração TLS do Atlas insegura.");
-    }
-
-    const db = client.db(env.MONGODB_DB?.trim() || "movefit");
+  return withAtlas(env, {
+    label: "consulta",
+    message: "A consulta ao catálogo está indisponível. Tente novamente em instantes.",
+  }, async db => {
     const classes = db.collection("aulas")
       .find(activeRecords, {
         projection: { _id: 0, codigo: 1, nome: 1, descricao: 1, nivel: 1, duracao: 1, duracaoMinutos: 1 },
@@ -100,9 +71,7 @@ async function readAtlas(env, includeSessions) {
       .sort({ diaSemana: 1, horario: 1, codigo: 1 }).limit(200).toArray();
 
     return await Promise.all([classes, sessions]);
-  } finally {
-    await client.close();
-  }
+  });
 }
 
 function publicClass(record) {
@@ -131,15 +100,9 @@ export async function readCatalog(env, { atlasOnly = false, includeSessions = tr
     throw new RequestError(503, "MongoDB Atlas não configurado neste ambiente.");
   }
 
-  let records = [sampleClasses, includeSessions ? sampleSessions : []];
-  if (mode === "atlas") {
-    try {
-      records = await readAtlas(env, includeSessions);
-    } catch (error) {
-      console.warn(`MoveFIT: consulta Atlas indisponível (${atlasFailureReason(error)}).`);
-      throw new RequestError(502, "A consulta ao catálogo está indisponível. Tente novamente em instantes.");
-    }
-  }
+  const records = mode === "atlas"
+    ? await readAtlas(env, includeSessions)
+    : [sampleClasses, includeSessions ? sampleSessions : []];
 
   const classes = records[0]
     .filter(record => record.ativo !== false && validCode(record.codigo) && typeof record.nome === "string" && record.nome.trim())
@@ -167,6 +130,16 @@ export function sessionsOnDate(catalog, date, now = localDateTime()) {
   return catalog.sessions
     .filter(session => session.weekday === day && (date !== now.date || session.time > now.time))
     .map(({ weekday, ...session }) => session);
+}
+
+export async function availableSessionsOnDate(env, catalog, date, now = localDateTime()) {
+  const sessions = sessionsOnDate(catalog, date, now);
+  if (catalog.mode !== "atlas" || !sessions.length) return sessions;
+  const counts = await countReservations(env, date, sessions);
+  return sessions.map(session => ({
+    ...session,
+    available: Math.max(0, session.available - (counts.get(session.id) ?? 0)),
+  }));
 }
 
 export function formatDate(date) {
