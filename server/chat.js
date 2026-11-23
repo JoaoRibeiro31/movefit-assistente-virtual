@@ -268,7 +268,22 @@ export async function answerChat(env, input) {
   if (input.action === "classes") return { ...fallback, reply: operationalReply("classes", catalog) };
 
   const enabled = Boolean(env.GEMINI_API_KEY?.trim());
-  const decision = enabled ? await askGemini(env, input, catalog) : inferDemoIntent(input, catalog);
+  const localDecision = inferDemoIntent(input, catalog);
+  let decision = localDecision;
+  let usedGemini = false;
+
+  // Aquecimento e treino usam exemplos revisados pelo servidor. Isso reduz chamadas à IA
+  // e mantém essas orientações disponíveis quando o provedor externo estiver indisponível.
+  if (enabled && !["warmup", "workout"].includes(localDecision.intent)) {
+    try {
+      decision = await askGemini(env, input, catalog);
+      usedGemini = true;
+    } catch (error) {
+      // A integração é complementar. Se ela falhar, a classificação local mantém o
+      // atendimento e continua submetendo fatos e reservas às regras do backend.
+      if (!(error instanceof RequestError) || error.status !== 502) throw error;
+    }
+  }
   if (["warmup", "workout"].includes(input.action) && decision.intent !== "health") {
     decision.intent = input.action;
   }
@@ -295,7 +310,7 @@ export async function answerChat(env, input) {
   const reply = factsReply || trainingReply || (claimsBooking ? bookingReply(catalog.mode) : generated || generalReply);
   return {
     reply,
-    mode: enabled ? "gemini" : "demo",
+    mode: usedGemini ? "gemini" : "demo",
     dataMode: catalog.mode,
     ...(intent === "booking" ? { nextAction: "schedule" } : {}),
   };
