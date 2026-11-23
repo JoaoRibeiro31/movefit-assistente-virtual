@@ -100,14 +100,4 @@ Faça primeiro o deploy em modo demonstrativo para conferir as telas e as rotas.
 - `server/catalog.js` normaliza o catálogo e calcula vagas por data. `server/atlas.js` padroniza a conexão com o Atlas. `server/http.js` valida pedidos e padroniza respostas JSON. `server/chat.js` usa o catálogo e o Gemini para atender o visitante.
 - `data/` contém os exemplos de aulas e horários.
 
-## Equipe
-
-| Integrante | Área de contribuição |
-| --- | --- |
-| João | Prototipação no Figma, preparação do GitHub e Cloudflare, organização e integração inicial |
-| Rafael | Interface web e JavaScript |
-| Brian | Backend e integrações com Gemini e MongoDB |
-| Erick | Fluxos de conversa, dados demonstrativos e documentação |
-| Marcos | Testes, acessibilidade e validação das funcionalidades |
-
 Consulte o arquivo [LICENSE](LICENSE) para os termos de uso do código.
