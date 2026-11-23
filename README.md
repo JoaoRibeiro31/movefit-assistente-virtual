@@ -31,7 +31,9 @@ Preencha os valores no arquivo `.dev.vars` na raiz. Reinicie `npm run dev` depoi
 2. Salve-a em `GEMINI_API_KEY`. O padrão é `gemini-3.5-flash-lite`. Para trocar, defina `GEMINI_MODEL` com o identificador de um [modelo disponível](https://ai.google.dev/gemini-api/docs/models) no seu projeto.
 3. Envie uma pergunta livre sobre os horários de uma modalidade pelo chat. Atalhos de fatos conhecidos podem ser respondidos pelo servidor. Para verificar a chamada ao Google, confira `mode: "gemini"` na resposta de `POST /api/chat` e `dataMode: "atlas"` se quiser validar os dois serviços juntos. Em caso de erro, confira a chave, o modelo e a cota no AI Studio. [Guia de chaves do Gemini](https://ai.google.dev/gemini-api/docs/api-key).
 
-O servidor compartilha com o Gemini apenas o catálogo público normalizado e o contexto recente da conversa. O modelo retorna uma decisão estruturada. A aplicação valida a decisão e monta as respostas sobre aulas e horários a partir dos registros consultados. A chave do Google e a conexão do MongoDB ficam nas Pages Functions.
+Quando a rota usa a IA, o servidor envia ao Gemini a pergunta atual, até quatro perguntas anteriores do visitante, a data e os nomes e códigos públicos das modalidades. Respostas anteriores, horários e vagas ficam fora da chamada. O servidor mascara identificadores comuns, como e-mails, telefones, documentos e códigos de reserva, e responde localmente às mensagens com termos de saúde reconhecidos. O filtro pode deixar passar nomes, endereços e outros dados em texto livre. Use informações fictícias ao testar.
+
+O Gemini retorna uma decisão estruturada. A aplicação valida a decisão e monta as respostas sobre aulas e horários a partir dos registros consultados. A chave do Google e a conexão do MongoDB ficam nas Pages Functions.
 
 ### MongoDB Atlas
 
@@ -57,7 +59,7 @@ Os horários de aula são recorrentes por dia da semana. `diaSemana` vai de `0` 
 
 As chamadas usam o driver Node.js com TLS obrigatório e validação de certificados. Para cada combinação de data e horário, a coleção `reservas` usa um único documento. O Atlas verifica a vaga e a duplicidade no mesmo comando que registra a reserva. A disponibilidade de outras datas continua independente. Os registros de erro contêm apenas categorias gerais de falha.
 
-O agendamento acadêmico identifica o visitante por um cookie do navegador e guarda somente o hash do identificador, o código da reserva e os dados da sessão. Não há cadastro pessoal ou cancelamento neste fluxo. A deduplicação vale para o mesmo navegador enquanto o cookie estiver ativo. Para oferecer reservas pessoais com consulta e cancelamento, use uma conta autenticada.
+O agendamento acadêmico identifica o visitante por um cookie do navegador. Novos comprovantes guardam o código e um hash específico daquela data e sessão. A data e a sessão identificam o documento que reúne as reservas. Uma tentativa duplicada devolve apenas o aviso de duplicidade. O backend ainda reconhece o formato dos registros anteriores. Não há cadastro pessoal ou cancelamento neste fluxo. A deduplicação vale para o mesmo navegador enquanto o cookie estiver ativo. Para oferecer reservas pessoais com consulta e cancelamento, use uma conta autenticada.
 
 ## Validar a demonstração
 
@@ -71,7 +73,7 @@ Execute `npm test` para rodar os testes do backend. Na interface, confira estes 
 | Orientações gerais | Use **Aquecimento** e **Sugestões de treino**. Experimente uma pergunta sobre dor ou restrição e verifique se a resposta encaminha para avaliação profissional. |
 | Agendamento | Use **Agendar aula**, selecione uma data futura e uma sessão com vaga e confirme. Com Atlas, confira o comprovante e a vaga consumida ao reabrir o painel. Tente o mesmo horário pelo mesmo navegador e verifique o bloqueio. Sem Atlas, confira o aviso de simulação. |
 
-A conversa fica em memória enquanto a página está aberta, e o servidor envia o contexto recente ao Gemini quando a integração está ativa. A confirmação passa pelo formulário e pelo servidor. As mensagens do chat não gravam reservas.
+A conversa fica em memória enquanto a página está aberta. A confirmação passa pelo formulário e pelo servidor. As mensagens do chat não gravam reservas.
 
 ## Publicar pelo GitHub e Cloudflare Pages
 
@@ -86,6 +88,8 @@ npm run build:pages
 ```
 
 O comando gera `public/_worker.js/` em modo avançado. O Pages empacota o ponto de entrada e publica a aplicação compilada como módulo separado. Isso preserva as importações nativas do Node usadas pelo Atlas. A pasta é gerada no build e fica fora do Git.
+
+O empacotador aceita apenas arquivos autorizados em `public/`. Ao adicionar uma imagem ou página intencionalmente, atualize a lista em `scripts/package-pages-worker.mjs`. O arquivo `public/_headers` restringe scripts, conexões, permissões e incorporação das páginas no navegador. As APIs aplicam seus próprios cabeçalhos em `server/http.js`. As fontes do layout ainda são carregadas do Google Fonts. [Cabeçalhos do Cloudflare Pages](https://developers.cloudflare.com/pages/configuration/headers/).
 
 Faça primeiro o deploy em modo demonstrativo para conferir as telas e as rotas. Depois, ative os serviços na prévia, refaça o deploy e repita os testes pela URL gerada pela Cloudflare. Consulte [a configuração das Pages Functions](https://developers.cloudflare.com/pages/functions/get-started/) e [o guia de conexão com MongoDB](https://developers.cloudflare.com/workers/tutorials/connect-to-mongodb-atlas/).
 

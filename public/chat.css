@@ -1,3 +1,4 @@
+/* Estrutura de tela inteira com rolagem na conversa e campo de envio acessível. */
 .chat-page {
   height: 100vh;
   height: 100dvh;
@@ -86,6 +87,7 @@
   scrollbar-color: #b7ae98 transparent;
 }
 
+/* Cada mensagem é uma linha; a autoria muda o alinhamento e a cor do balão. */
 .messages {
   display: grid;
   gap: 22px;
@@ -220,6 +222,7 @@
   line-height: 1.5;
 }
 
+/* O formulário usa três colunas no desktop e uma em telas pequenas. */
 .booking-panel {
   background: var(--cream);
   border: 1px solid #dbc984;

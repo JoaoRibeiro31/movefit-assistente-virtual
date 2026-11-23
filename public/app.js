@@ -1,3 +1,4 @@
+// Guarda referências à conversa e ao formulário de reserva da página do Muvinho.
 const chatForm = document.querySelector('#chat-form');
 const messageInput = document.querySelector('#user-input');
 const sendButton = document.querySelector('#send-message');
@@ -18,7 +19,9 @@ const bookingStatus = document.querySelector('#booking-status');
 const bookingConfirm = document.querySelector('#booking-confirm');
 const bookingClose = document.querySelector('#close-booking');
 
+// Mantém só as últimas perguntas em memória para dar contexto, sem salvar no navegador.
 const history = [];
+const maxPreviousQuestions = 4;
 let chatBusy = false;
 let bookingBusy = false;
 let catalog;
@@ -30,6 +33,7 @@ const saoPauloDate = new Intl.DateTimeFormat('pt-BR', {
 const chatTime = new Intl.DateTimeFormat('pt-BR', { timeStyle: 'short' });
 
 function today() {
+  // Usa a data de São Paulo para combinar com a validação de horários do servidor.
   const date = Object.fromEntries(saoPauloDate.formatToParts(new Date()).map(({ type, value }) => [type, value]));
   return `${date.year}-${date.month}-${date.day}`;
 }
@@ -51,6 +55,7 @@ function appendMessage(text, role, source = '') {
   author.className = role === 'assistant' ? 'message-author' : 'sr-only';
   author.textContent = role === 'assistant' ? 'Muvinho' : 'Você';
   const content = document.createElement('p');
+  // Mensagens são texto, inclusive quando contêm caracteres usados em HTML.
   content.textContent = text;
   const meta = document.createElement('div');
   meta.className = 'message-meta';
@@ -78,6 +83,7 @@ function sourceLabel({ mode, dataMode }, action) {
 }
 
 async function requestJSON(path, options = {}) {
+  // As chamadas têm limite de tempo. A consulta de horários pode ser cancelada ao mudar a data.
   const timeout = AbortSignal.timeout(25000);
   const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   const response = await fetch(path, { ...options, signal, cache: 'no-store' });
@@ -114,8 +120,8 @@ async function submitMessage(raw, action) {
     if (typeof result.reply !== 'string' || !result.reply.trim()) {
       throw new Error('O servidor não enviou uma resposta. Tente novamente.');
     }
-    history.push({ role: 'user', text: message }, { role: 'assistant', text: result.reply.slice(0, 500) });
-    if (history.length > 8) history.splice(0, history.length - 8);
+    history.push({ role: 'user', text: message });
+    if (history.length > maxPreviousQuestions) history.shift();
     appendMessage(result.reply, 'assistant', sourceLabel(result, action));
     if (result.nextAction === 'schedule') openBooking(!messageInput.value);
   } catch (error) {
@@ -145,6 +151,7 @@ function updateBookingCopy(mode) {
 }
 
 function showSessions() {
+  // Atualiza os horários da modalidade escolhida e deixa sessões lotadas fora da seleção.
   resetSelect(bookingSession, 'Escolha um horário');
   bookingSession.disabled = true;
   bookingConfirm.disabled = true;
@@ -171,6 +178,7 @@ function showSessions() {
 }
 
 async function loadCatalog() {
+  // Cancela a consulta anterior para evitar que uma data antiga substitua a seleção atual.
   const previousClass = bookingClass.value;
   catalogRequest?.abort();
   catalog = undefined;
@@ -232,6 +240,7 @@ bookingForm.addEventListener('submit', async event => {
   bookingStatus.textContent = reserve ? 'Registrando a reserva…' : 'Conferindo os dados da simulação…';
 
   try {
+    // Só a data, o código da sessão e a confirmação são necessários para pedir a reserva.
     const result = await postJSON(reserve ? '/api/reservas' : '/api/simulate', {
       date: bookingDate.value,
       sessionId: bookingSession.value,
@@ -270,6 +279,7 @@ chatForm.addEventListener('submit', event => {
 });
 
 for (const button of quickButtons) {
+  // Agendar abre o formulário. Os demais botões enviam a pergunta associada ao atalho.
   button.addEventListener('click', () => {
     const { action, question } = button.dataset;
     if (action === 'schedule') openBooking();

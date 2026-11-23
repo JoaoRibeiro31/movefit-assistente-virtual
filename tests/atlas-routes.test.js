@@ -4,10 +4,15 @@ import { MongoClient } from "mongodb";
 import { onRequest as aulas } from "../functions/api/aulas.js";
 import { onRequest as horarios } from "../functions/api/horarios.js";
 
+// URI fictícia: os testes observam as chamadas ao driver sem conectar a um banco.
 const env = { MONGODB_URI: "mongodb://fake.test:27017/", MONGODB_DB: "movefit" };
 
 async function call(route, path, bindings = env, method = "GET") {
   const response = await route({ request: new Request(`https://movefit.test/api/${path}`, { method }), env: bindings });
+  // O mesmo tratamento que protege o catálogo vale para as respostas de erro.
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
+  assert.equal(response.headers.get("Cross-Origin-Resource-Policy"), "same-origin");
+  assert.equal(response.headers.get("Referrer-Policy"), "no-referrer");
   return { status: response.status, body: await response.json() };
 }
 
@@ -20,6 +25,7 @@ test("aulas e horários retornam campos públicos e usam apenas as coleções es
       { codigo: "H02", aulaCodigo: "inexistente", diaSemana: 4, horario: "19:00", vagasTotais: 15, vagasDisponiveis: 3 },
     ],
   };
+  // O stub conserva os campos de teste para também verificar o filtro na resposta HTTP.
   t.mock.method(MongoClient.prototype, "db", function (name) {
     assert.equal(name, "movefit");
     assert.equal(this.options.tls, true);
@@ -73,6 +79,7 @@ test("rotas Atlas validam entradas e falham sem exibir dados de exemplo ou detal
 });
 
 test("o log distingue a falha de TLS sem registrar detalhes do Atlas", async t => {
+  // Simula uma mensagem de erro que seria sensível se aparecesse na resposta ou nos logs.
   const privateDetail = "mongodb://usuario:senha@fake.test:27017/";
   const cause = Object.assign(new Error(privateDetail), { code: "ERR_TLS_CERT_ALTNAME_INVALID" });
   const serverError = new Error("conexão de teste", { cause });

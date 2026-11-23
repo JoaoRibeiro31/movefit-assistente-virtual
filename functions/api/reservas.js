@@ -3,6 +3,7 @@ import { endpoint, json, readJson, RequestError } from "../../server/http.js";
 import { bookingVisitor, reserveSession } from "../../server/reservations.js";
 
 export const onRequest = endpoint("POST", async ({ request, env }) => {
+  // O formulário envia apenas data, sessão e confirmação, sem dados de cadastro.
   const { date, sessionId, confirmed } = await readJson(request);
   parseDate(date);
   const now = localDateTime();
@@ -12,10 +13,12 @@ export const onRequest = endpoint("POST", async ({ request, env }) => {
   const visitor = bookingVisitor(request);
   if (!visitor) throw new RequestError(400, "Consulte os horários neste navegador antes de confirmar a reserva.");
 
+  // A sessão precisa existir no catálogo do Atlas e ainda estar no horário de reserva.
   const catalog = await readCatalog(env, { atlasOnly: true });
   const session = sessionsOnDate(catalog, date, now).find(item => item.id === sessionId);
   if (!session) throw new RequestError(404, "Esta sessão não está disponível na data e no horário selecionados.");
   const code = await reserveSession(env, { date, session, visitor });
+  // O código só é entregue na resposta da gravação que terminou com sucesso.
   const { id, classId, className, time } = session;
   return json({
     reserved: true,
