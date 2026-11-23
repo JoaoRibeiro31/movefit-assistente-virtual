@@ -13,7 +13,7 @@ npm run dev
 
 Abra a URL local exibida no terminal. Use **Fale com o Muvinho** para entrar no chat. A rota `/api/health` indica quais integrações foram configuradas. Uma consulta ao catálogo ou uma conversa é que confirma se o serviço responde.
 
-Sem chaves, o protótipo inicia com respostas e dados demonstrativos. Você pode ativar Gemini e Atlas de forma independente. Com apenas Gemini, o chat usa IA e dados de exemplo. Com apenas MongoDB, as respostas demonstrativas consultam o catálogo do Atlas. Se um serviço configurado falhar, o chat informa a indisponibilidade.
+Sem chaves, o protótipo inicia com respostas e dados demonstrativos. Você pode ativar Gemini e Atlas de forma independente. Com apenas Gemini, o chat usa IA e dados de exemplo. Com apenas MongoDB, as respostas locais consultam o catálogo do Atlas. Se o Gemini configurado falhar, o atendimento continua pelas regras locais e preserva as consultas e reservas validadas pelo backend.
 
 ## Configurar Gemini e MongoDB Atlas
 
