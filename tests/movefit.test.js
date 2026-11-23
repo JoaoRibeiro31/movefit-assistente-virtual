@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { MongoClient } from "mongodb";
 import { onRequest as catalog } from "../functions/api/catalog.js";
 import { onRequest as chat } from "../functions/api/chat.js";
 import { onRequest as health } from "../functions/api/health.js";
@@ -86,7 +87,7 @@ test("uma lesão mencionada antes impede exemplos de treino na continuação", a
   assert.doesNotMatch(result.body.reply, /cadeira firme|flexão/);
 });
 
-test("pedidos claros de treino usam os exemplos gerais validados pelo servidor", async t => {
+test("o Gemini classifica pedidos de treino e o servidor valida as orientações", async t => {
   const fetch = t.mock.method(globalThis, "fetch", async () => Response.json({
     candidates: [{ content: { parts: [{ text: JSON.stringify({
       intent: "workout", classId: "", date: "", reply: "Faça 150 flexões diárias.",
@@ -96,10 +97,10 @@ test("pedidos claros de treino usam os exemplos gerais validados pelo servidor",
     env: { GEMINI_API_KEY: "fake-test-key" },
     payload: { message: "Quero exercícios de força, já treino regularmente." },
   });
-  assert.equal(result.body.mode, "demo");
+  assert.equal(result.body.mode, "gemini");
   assert.match(result.body.reply, /remada no aparelho, leg press e supino em máquina/);
   assert.doesNotMatch(result.body.reply, /150 flexões/);
-  assert.equal(fetch.mock.callCount(), 0);
+  assert.equal(fetch.mock.callCount(), 1);
 });
 
 test("a simulação exige confirmação, dia correto e vaga, sem alterar a disponibilidade", async () => {
@@ -185,7 +186,13 @@ test("o chat limita o contexto do Gemini e remove identificadores comuns da entr
 });
 
 test("quando o Gemini configurado falha, o atendimento continua pelas regras locais", async t => {
-  const fetch = t.mock.method(globalThis, "fetch", async () => new Response(null, { status: 403 }));
+  const warn = t.mock.method(console, "warn", () => {});
+  const fetch = t.mock.method(globalThis, "fetch", async () => Response.json({
+    error: {
+      message: "detalhe privado do provedor",
+      details: [{ reason: "API_KEY_SERVICE_BLOCKED" }],
+    },
+  }, { status: 403 }));
   const warmup = await call(chat, {
     env: { GEMINI_API_KEY: "fake-test-key" },
     payload: { message: "Como posso me aquecer antes do treino?", action: "warmup" },
@@ -193,7 +200,7 @@ test("quando o Gemini configurado falha, o atendimento continua pelas regras loc
   assert.equal(warmup.status, 200);
   assert.equal(warmup.body.mode, "demo");
   assert.match(warmup.body.reply, /aquecimento|5 a 10 minutos/i);
-  assert.equal(fetch.mock.callCount(), 0);
+  assert.equal(fetch.mock.callCount(), 1);
 
   const result = await call(chat, {
     env: { GEMINI_API_KEY: "fake-test-key" },
@@ -202,7 +209,7 @@ test("quando o Gemini configurado falha, o atendimento continua pelas regras loc
   assert.equal(result.status, 200);
   assert.equal(result.body.mode, "demo");
   assert.match(result.body.reply, /começando|nível/i);
-  assert.equal(fetch.mock.callCount(), 0);
+  assert.equal(fetch.mock.callCount(), 2);
 
   const general = await call(chat, {
     env: { GEMINI_API_KEY: "fake-test-key" },
@@ -211,5 +218,48 @@ test("quando o Gemini configurado falha, o atendimento continua pelas regras loc
   assert.equal(general.status, 200);
   assert.equal(general.body.mode, "demo");
   assert.match(general.body.reply, /horários/i);
-  assert.equal(fetch.mock.callCount(), 1);
+  assert.equal(fetch.mock.callCount(), 3);
+  assert.match(warn.mock.calls[0].arguments[0], /HTTP 403 \(API_KEY_SERVICE_BLOCKED\)/);
+  assert.doesNotMatch(warn.mock.calls[0].arguments[0], /detalhe privado/);
+});
+
+test("uma pergunta aberta recebe a resposta do Gemini pelo modelo alternativo quando o primeiro está indisponível", async t => {
+  const fetch = t.mock.method(globalThis, "fetch", async url => {
+    if (url.endsWith("/gemini-3.5-flash-lite:generateContent")) {
+      return new Response(null, { status: 503 });
+    }
+    return Response.json({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({
+        intent: "general", classId: "", date: "", reply: "Exercícios aeróbicos sustentam o esforço por mais tempo.",
+      }) }] } }],
+    });
+  });
+  const result = await call(chat, {
+    env: { GEMINI_API_KEY: "fake-test-key", GEMINI_MODEL: "models/gemini-3.5-flash-lite" },
+    payload: { message: "O que é um exercício aeróbico?" },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.mode, "gemini");
+  assert.match(result.body.reply, /sustentam o esforço/);
+  assert.equal(fetch.mock.callCount(), 2);
+  assert.match(fetch.mock.calls[1].arguments[0], /\/gemini-3\.1-flash-lite:generateContent$/);
+});
+
+test("o chat responde à pergunta aberta com Gemini mesmo quando o catálogo está indisponível", async t => {
+  t.mock.method(MongoClient.prototype, "db", () => { throw new Error("falha simulada no catálogo"); });
+  t.mock.method(globalThis, "fetch", async () => Response.json({
+    candidates: [{ content: { parts: [{ text: JSON.stringify({
+      intent: "general", classId: "", date: "", reply: "Exercícios aeróbicos sustentam o esforço por mais tempo.",
+    }) }] } }],
+  }));
+  const env = { MONGODB_URI: "mongodb://fake.test:27017/", GEMINI_API_KEY: "fake-test-key" };
+  const result = await call(chat, { env, payload: { message: "O que é um exercício aeróbico?" } });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.mode, "gemini");
+  assert.equal(result.body.dataMode, "unavailable");
+  assert.match(result.body.reply, /sustentam o esforço/);
+
+  const classes = await call(chat, { env, payload: { message: "Quais aulas vocês oferecem?", action: "classes" } });
+  assert.equal(classes.status, 502);
+  assert.match(classes.body.error, /catálogo está indisponível/);
 });

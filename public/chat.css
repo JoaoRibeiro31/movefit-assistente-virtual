@@ -102,6 +102,8 @@
 .message-row.user { justify-content: flex-end; }
 
 .message {
+  /* Mantém o rótulo acessível oculto dentro da região que rola. */
+  position: relative;
   max-width: min(85%, 660px);
   border: 1px solid #e2ddd0;
   border-radius: 6px 19px 19px;
@@ -180,6 +182,7 @@
 }
 
 .composer {
+  position: relative;
   display: flex;
   gap: 9px;
   align-items: stretch;

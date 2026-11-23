@@ -79,6 +79,7 @@ function sourceLabel({ mode, dataMode }, action) {
   if (mode === 'gemini') return dataMode === 'demo' ? 'Gemini · Dados demonstrativos' : 'Gemini';
   if (action === 'hours' || action === 'faq') return 'Informações da MoveFIT';
   if (dataMode === 'atlas') return 'Resposta automática · Dados do Atlas';
+  if (dataMode === 'unavailable') return 'Resposta automática';
   return 'Modo demonstração';
 }
 
