@@ -78,8 +78,10 @@ A confirmação da simulação valida a data, a sessão e a disponibilidade no s
 5. Confira se está na branch `test` e revise os arquivos antes de fazer o commit. Envie apenas essa branch e acompanhe o deploy em **Deployments**. Para levar as mudanças à `main`, abra um pull request de `test` para `main` e aguarde aprovação.
 
 ```bash
-npx wrangler pages functions build --outdir .wrangler/pages-worker --compatibility-flag nodejs_compat --compatibility-date 2026-11-22 && cp .wrangler/pages-worker/index.js public/_worker.js
+npm run build:pages
 ```
+
+O comando gera `public/_worker.js/` em modo avançado. O Pages empacota o ponto de entrada e publica a aplicação compilada como módulo separado. Isso preserva as importações nativas do Node usadas pelo Atlas. A pasta é gerada no build e fica fora do Git.
 
 Faça primeiro o deploy em modo demonstrativo para conferir as telas e as rotas. Depois, ative os serviços na prévia, refaça o deploy e repita os testes pela URL gerada pela Cloudflare. Consulte [a configuração das Pages Functions](https://developers.cloudflare.com/pages/functions/get-started/) e [o guia de conexão com MongoDB](https://developers.cloudflare.com/workers/tutorials/connect-to-mongodb-atlas/).
 
