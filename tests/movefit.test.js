@@ -245,6 +245,22 @@ test("uma pergunta aberta recebe a resposta do Gemini pelo modelo alternativo qu
   assert.match(fetch.mock.calls[1].arguments[0], /\/gemini-3\.1-flash-lite:generateContent$/);
 });
 
+test("a chamada ao Gemini usa o modo de redirecionamento do Workers e rejeita redirecionamentos", async t => {
+  const warn = t.mock.method(console, "warn", () => {});
+  const fetch = t.mock.method(globalThis, "fetch", async () => Response.redirect("https://example.com/", 307));
+  const result = await call(chat, {
+    env: { GEMINI_API_KEY: "fake-test-key" },
+    payload: { message: "O que é um exercício aeróbico?" },
+  });
+  assert.equal(fetch.mock.callCount(), 1);
+  const [url, options] = fetch.mock.calls[0].arguments;
+  assert.equal(new URL(url).hostname, "generativelanguage.googleapis.com");
+  assert.equal(options.redirect, "manual");
+  assert.equal(result.status, 200);
+  assert.equal(result.body.mode, "demo");
+  assert.match(warn.mock.calls[0].arguments[0], /redirecionamento do Gemini bloqueado/);
+});
+
 test("o chat responde à pergunta aberta com Gemini mesmo quando o catálogo está indisponível", async t => {
   t.mock.method(MongoClient.prototype, "db", () => { throw new Error("falha simulada no catálogo"); });
   t.mock.method(globalThis, "fetch", async () => Response.json({

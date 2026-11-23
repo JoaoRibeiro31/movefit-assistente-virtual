@@ -197,8 +197,8 @@ async function askGemini(env, input, catalog) {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY.trim() },
-      // A chave só é enviada ao endereço esperado do provedor.
-      redirect: "error",
+      // O Workers aceita "manual". Isso impede que a chave siga um redirecionamento.
+      redirect: "manual",
       signal,
       body,
     }).catch(() => {
@@ -206,6 +206,10 @@ async function askGemini(env, input, catalog) {
       return null;
     });
     if (!response) break;
+    if (response.status >= 300 && response.status < 400) {
+      console.warn(`MoveFIT: redirecionamento do Gemini bloqueado (HTTP ${response.status}).`);
+      break;
+    }
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
