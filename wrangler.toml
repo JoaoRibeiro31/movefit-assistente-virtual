@@ -1,5 +1,7 @@
 name = "movefit-assistente-virtual"
+# O Pages publica esta pasta. Segredos são cadastrados no ambiente, fora dos arquivos.
 pages_build_output_dir = "./public"
 compatibility_date = "2026-11-22"
+# O driver MongoDB usa recursos nativos do Node.
 compatibility_flags = ["nodejs_compat"]
 send_metrics = false

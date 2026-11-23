@@ -4,6 +4,7 @@ import { RequestError } from "./http.js";
 import { withAtlas } from "./atlas.js";
 import { countReservations } from "./reservations.js";
 
+// Horário de abertura da academia, separado da grade recorrente de aulas.
 export const hours = [
   { days: "Segunda a sexta", opens: "06:00", closes: "23:00" },
   { days: "Sábado", opens: "08:00", closes: "18:00" },
@@ -17,6 +18,7 @@ export const weekdays = [
 const codePattern = /^[a-z0-9][a-z0-9_-]{0,79}$/i;
 const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
+// Interpreta hoje e o horário atual no fuso da academia, mesmo em um servidor remoto.
 const clock = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/Sao_Paulo",
   year: "numeric", month: "2-digit", day: "2-digit",
@@ -31,6 +33,7 @@ export function localDateTime(now = new Date()) {
 export function parseDate(date) {
   if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
     const value = new Date(`${date}T00:00:00.000Z`);
+    // A comparação evita aceitar datas que o JavaScript ajusta para outro dia.
     if (!Number.isNaN(+value) && value.toISOString().slice(0, 10) === date) return value;
   }
   throw new RequestError(400, "Informe uma data válida no formato AAAA-MM-DD.");
@@ -44,6 +47,7 @@ export function dataMode(env) {
   return env.MONGODB_URI?.trim() ? "atlas" : "demo";
 }
 
+// Aceita os dois nomes utilizados nos registros antigos e novos do catálogo.
 const activeRecords = {
   $or: [{ ativo: true }, { ativa: true }],
   ativo: { $ne: false },
@@ -55,6 +59,7 @@ async function readAtlas(env, includeSessions) {
     label: "consulta",
     message: "A consulta ao catálogo está indisponível. Tente novamente em instantes.",
   }, async db => {
+    // Solicita somente os campos que fazem parte do catálogo público.
     const classes = db.collection("aulas")
       .find(activeRecords, {
         projection: { _id: 0, codigo: 1, nome: 1, descricao: 1, nivel: 1, duracao: 1, duracaoMinutos: 1 },
@@ -100,6 +105,7 @@ export async function readCatalog(env, { atlasOnly = false, includeSessions = tr
     throw new RequestError(503, "MongoDB Atlas não configurado neste ambiente.");
   }
 
+  // Atlas e dados fictícios passam pela mesma validação e produzem o mesmo formato.
   const records = mode === "atlas"
     ? await readAtlas(env, includeSessions)
     : [sampleClasses, includeSessions ? sampleSessions : []];
@@ -125,6 +131,7 @@ export async function readCatalog(env, { atlasOnly = false, includeSessions = tr
 }
 
 export function sessionsOnDate(catalog, date, now = localDateTime()) {
+  // Uma regra semanal vira uma sessão para a data solicitada; horários encerrados ficam de fora.
   const day = parseDate(date).getUTCDay();
   if (date < now.date) return [];
   return catalog.sessions
@@ -135,6 +142,7 @@ export function sessionsOnDate(catalog, date, now = localDateTime()) {
 export async function availableSessionsOnDate(env, catalog, date, now = localDateTime()) {
   const sessions = sessionsOnDate(catalog, date, now);
   if (catalog.mode !== "atlas" || !sessions.length) return sessions;
+  // A consulta devolve a contagem, sem expor detalhes ou códigos das reservas.
   const counts = await countReservations(env, date, sessions);
   return sessions.map(session => ({
     ...session,

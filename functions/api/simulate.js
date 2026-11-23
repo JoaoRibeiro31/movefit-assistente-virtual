@@ -2,6 +2,7 @@ import { availableSessionsOnDate, formatDate, localDateTime, parseDate, readCata
 import { endpoint, readJson, RequestError } from "../../server/http.js";
 
 export const onRequest = endpoint("POST", async ({ request, env }) => {
+  // A simulação segue as mesmas regras de data e vaga aplicadas no formulário.
   const { date, sessionId, confirmed } = await readJson(request);
   parseDate(date);
   const now = localDateTime();
@@ -15,6 +16,7 @@ export const onRequest = endpoint("POST", async ({ request, env }) => {
   if (!session) throw new RequestError(404, "Esta sessão não está disponível na data e no horário selecionados.");
   if (session.available === 0) throw new RequestError(409, "Esta sessão está sem vagas. Escolha outro horário.");
 
+  // A resposta informa que a disponibilidade foi consultada, sem gravar reserva ou emitir código.
   return {
     simulated: true,
     date,

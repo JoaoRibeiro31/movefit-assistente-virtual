@@ -26,6 +26,7 @@
   </header>
 
   <main class="chat-main" id="chat-main" tabindex="-1">
+    <!-- A região de conversa anuncia novas mensagens aos leitores de tela. -->
     <div class="conversation" id="conversation" tabindex="0" aria-label="Área da conversa">
       <div class="messages" id="messages" role="log" aria-label="Mensagens" aria-relevant="additions">
         <div class="message-row assistant">
@@ -37,6 +38,7 @@
         </div>
       </div>
 
+      <!-- app.js carrega as vagas e habilita o formulário ao abrir o agendamento. -->
       <section class="booking-panel" id="booking" aria-labelledby="booking-title" hidden>
         <div class="booking-heading">
           <div>
@@ -73,12 +75,13 @@
         <button type="button" data-action="warmup" data-question="Como posso me aquecer antes do treino?">Aquecimento</button>
         <button type="button" data-action="faq" data-question="Quais são as dúvidas frequentes sobre a MoveFIT?">Dúvidas frequentes</button>
       </div>
+      <!-- O JavaScript envia a conversa por POST; os controles começam desabilitados. -->
       <form id="chat-form" class="composer" method="post">
         <label class="sr-only" for="user-input">Sua mensagem</label>
-        <input id="user-input" name="message" type="text" maxlength="500" required placeholder="Digite sua mensagem..." autocomplete="off" disabled>
+        <input id="user-input" type="text" maxlength="500" required placeholder="Digite sua mensagem..." autocomplete="off" aria-describedby="chat-privacy" disabled>
         <button type="submit" class="chat-primary" id="send-message" disabled>Enviar</button>
       </form>
-      <p class="chat-note">Use dados fictícios nesta demonstração. As orientações são gerais e a avaliação individual cabe a um profissional de Educação Física.</p>
+      <p class="chat-note" id="chat-privacy">O Gemini pode processar mensagens deste chat. Use exemplos fictícios e evite compartilhar dados pessoais ou de saúde. Para avaliação individual, procure um profissional de Educação Física.</p>
       <noscript><p class="chat-note">Ative o JavaScript no navegador para conversar com o Muvinho.</p></noscript>
     </div>
   </main>

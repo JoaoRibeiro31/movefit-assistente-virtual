@@ -11,6 +11,7 @@ const sessionId = "funcional";
 const payload = { date, sessionId, confirmed: true };
 const url = "https://movefit.test";
 
+// Executa a rota como o navegador faria, sem abrir o servidor nem acessar o banco real.
 function call(route, path, { cookie, body, origin = url, bindings = env } = {}) {
   const headers = new Headers();
   if (cookie) headers.set("Cookie", cookie);
@@ -28,11 +29,13 @@ async function startVisitor() {
   const response = await call(catalog, `/api/catalog?date=${date}`);
   assert.equal(response.status, 200);
   const cookie = response.headers.get("Set-Cookie");
+  assert.match(cookie, /; Path=\/api;/);
   assert.match(cookie, /; HttpOnly; SameSite=Lax; Secure$/);
   return cookie.split(";")[0];
 }
 
 function mockAtlas(t) {
+  // O mapa representa os documentos de reserva. Cada atualização aplica os filtros antes de gravar.
   const documents = new Map();
   const aulas = [{ codigo: "funcional", nome: "Funcional", ativo: true }];
   const horarios = [
@@ -49,18 +52,20 @@ function mockAtlas(t) {
       }
       const document = documents.get(id);
       assert.deepEqual(filter.$expr.$lt[0], { $size: "$reservas" });
-      assert.equal(filter["reservas.visitante"].$ne, update.$push.reservas.visitante);
+      const visitors = filter["reservas.visitante"].$nin;
+      assert.ok(visitors.includes(update.$push.reservas.visitante));
       if (document.reservas.length >= filter.$expr.$lt[1] ||
-          document.reservas.some(item => item.visitante === filter["reservas.visitante"].$ne)) {
+          document.reservas.some(item => visitors.includes(item.visitante))) {
         return { modifiedCount: 0 };
       }
       document.reservas.push(update.$push.reservas);
       return { modifiedCount: 1 };
     },
-    async findOne(filter) {
-      const visitor = filter["reservas.visitante"];
-      const booking = documents.get(filter._id)?.reservas.find(item => item.visitante === visitor);
-      return booking && { reservas: [booking] };
+    async findOne(filter, options) {
+      assert.deepEqual(options.projection, { _id: 1 });
+      const visitors = filter["reservas.visitante"].$in;
+      const exists = documents.get(filter._id)?.reservas.some(item => visitors.includes(item.visitante));
+      return exists ? { _id: filter._id } : null;
     },
     aggregate(pipeline) {
       const ids = pipeline[0].$match._id.$in;
@@ -83,7 +88,10 @@ function mockAtlas(t) {
 test("reservas concorrentes respeitam o limite, deduplicam por visitante e atualizam vagas somente na data", async t => {
   const documents = mockAtlas(t);
   const cookies = await Promise.all([startVisitor(), startVisitor(), startVisitor()]);
-  const initial = await call(reserve, "/api/reservas", { cookie: cookies[0], body: payload });
+  const initial = await call(reserve, "/api/reservas", {
+    cookie: cookies[0],
+    body: { ...payload, nome: "Pessoa Fictícia" },
+  });
   assert.equal(initial.status, 201);
   const first = await initial.json();
   assert.equal(first.reserved, true);
@@ -92,11 +100,12 @@ test("reservas concorrentes respeitam o limite, deduplicam por visitante e atual
     cookies.map(cookie => call(reserve, "/api/reservas", { cookie, body: payload })),
   );
   assert.equal(duplicate.status, 409);
-  assert.match((await duplicate.json()).error, new RegExp(first.booking.code));
+  assert.deepEqual(await duplicate.json(), { error: "Este navegador já tem uma reserva nesta sessão." });
   assert.deepEqual(contenders.map(result => result.status).sort(), [201, 409]);
   assert.match((await contenders.find(result => result.status === 409).json()).error, /sem vagas/);
   const stored = documents.get(`${date}:${sessionId}`).reservas;
   assert.equal(stored.length, 2);
+  assert.deepEqual(Object.keys(stored[0]).sort(), ["codigo", "visitante"]);
   assert.match(stored[0].visitante, /^[a-f0-9]{64}$/);
   assert.ok(!JSON.stringify(first).includes(stored[0].visitante));
   const persisted = await call(catalog, `/api/catalog?date=${date}`, { cookie: cookies[0] });
@@ -104,8 +113,33 @@ test("reservas concorrentes respeitam o limite, deduplicam por visitante e atual
   assert.equal((await persisted.json()).sessions[0].available, 0);
   const dated = await call(horarios, `/api/horarios?data=${date}&aula=funcional`);
   assert.equal((await dated.json()).horarios[0].vagasDisponiveis, 0);
-  const nextWeek = await call(catalog, "/api/catalog?date=2099-12-03");
-  assert.equal((await nextWeek.json()).sessions[0].available, 2);
+  const followingDate = "2099-12-03";
+  const nextWeek = await call(catalog, `/api/catalog?date=${followingDate}`);
+  const nextCatalog = await nextWeek.json();
+  assert.equal(nextCatalog.sessions[0].available, 2);
+  assert.ok(!JSON.stringify(nextCatalog).includes(first.booking.code));
+  // O mesmo visitante recebe um hash diferente se reservar a mesma aula em outra data.
+  const anotherDate = await call(reserve, "/api/reservas", {
+    cookie: cookies[0],
+    body: { ...payload, date: followingDate },
+  });
+  assert.equal(anotherDate.status, 201);
+  const nextStored = documents.get(`${followingDate}:${sessionId}`).reservas;
+  assert.notEqual(nextStored[0].visitante, stored[0].visitante);
+});
+
+test("a reserva existente com hash antigo continua valendo sem revelar seu código", async t => {
+  const documents = mockAtlas(t);
+  const cookie = await startVisitor();
+  const visitor = cookie.slice(cookie.indexOf("=") + 1);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(visitor));
+  const legacy = { codigo: "codigo-da-reserva-anterior", visitante: Buffer.from(digest).toString("hex") };
+  documents.set(`${date}:${sessionId}`, { data: date, sessaoId: sessionId, reservas: [legacy] });
+
+  const duplicate = await call(reserve, "/api/reservas", { cookie, body: payload });
+  assert.equal(duplicate.status, 409);
+  assert.deepEqual(await duplicate.json(), { error: "Este navegador já tem uma reserva nesta sessão." });
+  assert.deepEqual(documents.get(`${date}:${sessionId}`).reservas, [legacy]);
 });
 
 test("a rota rejeita origem externa, sessão inválida, vaga zero e pedidos sem confirmação", async t => {

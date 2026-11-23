@@ -2,6 +2,7 @@ import { availableSessionsOnDate, parseDate, readCatalog, validCode } from "../.
 import { endpoint, RequestError } from "../../server/http.js";
 
 export const onRequest = endpoint("GET", async ({ request, env }) => {
+  // Os filtros são opcionais e validados antes de consultar o Atlas.
   const params = new URL(request.url).searchParams;
   const aula = params.get("aula");
   const data = params.get("data");
@@ -12,6 +13,7 @@ export const onRequest = endpoint("GET", async ({ request, env }) => {
   const dia = data === null ? null : parseDate(data).getUTCDay();
 
   const catalog = await readCatalog(env, { atlasOnly: true });
+  // Sem data, mostra a grade de uma semana. Com data, calcula as vagas daquela ocorrência.
   const sessions = data === null ? catalog.sessions : await availableSessionsOnDate(env, catalog, data);
 
   return {

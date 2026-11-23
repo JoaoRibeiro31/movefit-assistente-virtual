@@ -1,5 +1,6 @@
 import { RequestError } from "./http.js";
 
+// Classifica erros do driver sem copiar a mensagem que pode conter endereços ou credenciais.
 function atlasFailureReason(error) {
   const serverErrors = Array.from(error?.reason?.servers?.values?.() ?? [], server => server.error);
   const errors = [error, ...serverErrors].flatMap(item => [item, item?.cause, item?.cause?.cause]);
@@ -18,12 +19,21 @@ function atlasFailureReason(error) {
   return "falha na configuração ou na leitura";
 }
 
+export function requireVerifiedTls(options) {
+  // Parâmetros na URI também afetam a configuração efetiva do driver.
+  if (!options.tls || options.tlsInsecure || options.tlsAllowInvalidCertificates ||
+      options.tlsAllowInvalidHostnames || options.rejectUnauthorized === false) {
+    throw new Error("Configuração TLS do Atlas insegura.");
+  }
+}
+
 export async function withAtlas(env, operation, run) {
   if (!env.MONGODB_URI?.trim()) {
     throw new RequestError(503, "MongoDB Atlas não configurado neste ambiente.");
   }
   try {
     const { MongoClient } = await import("mongodb");
+    // Limita conexões e tempo de espera por operação no ambiente Pages Functions.
     const client = new MongoClient(env.MONGODB_URI.trim(), {
       tls: true,
       maxPoolSize: 2,
@@ -32,11 +42,7 @@ export async function withAtlas(env, operation, run) {
       socketTimeoutMS: 5000,
     });
     try {
-      const tls = client.options;
-      if (!tls.tls || tls.tlsInsecure || tls.tlsAllowInvalidCertificates ||
-          tls.tlsAllowInvalidHostnames || tls.rejectUnauthorized === false) {
-        throw new Error("Configuração TLS do Atlas insegura.");
-      }
+      requireVerifiedTls(client.options);
       return await run(client.db(env.MONGODB_DB?.trim() || "movefit"));
     } finally {
       await client.close();

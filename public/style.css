@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Montserrat:wght@400;500;600;700;800;900&display=swap");
 
+/* Cores e fontes compartilhadas entre a página inicial e o chat. */
 :root {
   --yellow: #ffd93b;
   --ink: #111111;
@@ -85,6 +86,7 @@ button { cursor: pointer; }
 .button:hover { background: #ffe46d; }
 .button-small { border-radius: 2rem; min-height: 42px; padding: .6rem 1.05rem; font-size: .88rem; }
 
+/* As duas imagens usam o mesmo enquadramento; a máscara revela só o recorte. */
 .hero {
   --hero-photo-x: 64%;
   --hero-photo-y: 42%;
@@ -147,6 +149,7 @@ button { cursor: pointer; }
   color: var(--ink);
   border-radius: .9rem;
 }
+/* Enquadra o rosto do Muvinho na imagem original de identidade visual. */
 .muvinho-avatar {
   display: block;
   flex: none;
@@ -199,6 +202,7 @@ button { cursor: pointer; }
 .site-footer .wrap { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 1rem; padding-block: 1.65rem; }
 .site-footer p { margin: 0; color: #e5e5e5; font-size: .875rem; }
 
+/* Ajustes de navegação e colunas para telas menores. */
 @media (max-width: 950px) {
   .header-inner { flex-wrap: wrap; gap: .75rem 1rem; padding-block: .85rem; }
   .site-header nav { order: 3; width: 100%; flex-wrap: wrap; }

@@ -6,3 +6,9 @@ node_modules/
 .env*
 !.env.example
 npm-debug.log*
+# Chaves privadas e configurações locais de ferramentas.
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc

@@ -7,6 +7,7 @@ import { onRequest as simulate } from "../functions/api/simulate.js";
 import { localDateTime } from "../server/catalog.js";
 
 async function call(route, { query = "", payload, env = {} } = {}) {
+  // Chama a função do Pages em memória. Os testes não publicam nada nem consomem a cota da IA.
   const request = new Request(`https://movefit.test/api${query}`, payload === undefined ? {} : {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: "https://movefit.test" },
@@ -17,6 +18,7 @@ async function call(route, { query = "", payload, env = {} } = {}) {
 }
 
 function nextWeekday(day) {
+  // Usa a próxima semana completa para que a hora do teste não esconda sessões já encerradas.
   const date = new Date(`${localDateTime().date}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + (day - date.getUTCDay() + 7) % 7 + 7);
   return date.toISOString().slice(0, 10);
@@ -115,10 +117,11 @@ test("a simulação exige confirmação, dia correto e vaga, sem alterar a dispo
   assert.equal(after.body.sessions.find(item => item.id === payload.sessionId).available, 10);
 });
 
-test("o Gemini recebe dados do catálogo e a API produz a listagem com os horários cadastrados", async t => {
+test("o Gemini recebe apenas nomes e IDs do catálogo e a API lista os horários", async t => {
   const fetch = t.mock.method(globalThis, "fetch", async (_url, options) => {
     const request = JSON.parse(options.body);
-    assert.match(request.systemInstruction.parts[0].text, /funcional-qui-1800/);
+    assert.match(request.systemInstruction.parts[0].text, /"id":"funcional","name":"Funcional"/);
+    assert.doesNotMatch(request.systemInstruction.parts[0].text, /funcional-qui-1800|academyHours|"capacity"|"available"/);
     return Response.json({
       candidates: [{ content: { parts: [{
         text: JSON.stringify({ intent: "schedule", classId: "funcional", date: "", reply: "Hora inventada: 23:59" }),
@@ -135,6 +138,49 @@ test("o Gemini recebe dados do catálogo e a API produz a listagem com os horár
   assert.equal(result.body.dataMode, "demo");
   assert.match(result.body.reply, /Funcional, quinta-feira às 18:00/);
   assert.doesNotMatch(result.body.reply, /23:59|Pilates/);
+});
+
+test("o chat limita o contexto do Gemini e remove identificadores comuns da entrada e da resposta", async t => {
+  const key = "segredo-ficticio-de-teste";
+  const email = "pessoa@example.com";
+  const phone = "(11) 90000-0000";
+  const cpf = "123.456.789-00";
+  const mongoUri = "mongodb+srv://usuario:segredo@example.com";
+  const code = "11111111-2222-4333-8444-555555555555";
+  let contents;
+  t.mock.method(globalThis, "fetch", async (_url, options) => {
+    contents = JSON.parse(options.body).contents;
+    return Response.json({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({
+        intent: "general", classId: "", date: "", reply: `Olá! ${key} ${email} ${code}`,
+      }) }] } }],
+    });
+  });
+
+  const result = await call(chat, {
+    env: { GEMINI_API_KEY: key },
+    payload: {
+      message: `Funcional em 2029-10-16? ${email} ${phone} ${key} ${code}`,
+      history: [
+        { role: "user", text: `Posso ver os horários? CPF ${cpf}` },
+        { role: "user", text: `Tenho dor no joelho. ${mongoUri}` },
+        { role: "user", text: `Preciso de ajuda. ${mongoUri}` },
+        { role: "assistant", text: "Resposta anterior do Muvinho" },
+      ],
+    },
+  });
+
+  assert.equal(result.status, 200);
+  const context = JSON.parse(contents[0].parts[0].text);
+  assert.match(context.question, /^Funcional em 2029-10-16\?/);
+  assert.deepEqual(context.previousQuestions, [
+    "Posso ver os horários? CPF [dado removido]",
+    "Preciso de ajuda. [dado removido]",
+  ]);
+  for (const secret of [key, email, phone, cpf, mongoUri, code]) {
+    assert.ok(!JSON.stringify(contents).includes(secret));
+    assert.ok(!result.body.reply.includes(secret));
+  }
 });
 
 test("quando o Gemini configurado falha, a API sinaliza indisponibilidade", async t => {

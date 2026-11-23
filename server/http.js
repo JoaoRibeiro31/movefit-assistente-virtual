@@ -1,3 +1,4 @@
+// Erros previstos carregam apenas uma mensagem escrita para o público.
 export class RequestError extends Error {
   constructor(status, message) {
     super(message);
@@ -9,13 +10,18 @@ export function json(data, status = 200, headers = {}) {
   return Response.json(data, {
     status,
     headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
       ...headers,
+      // APIs podem devolver cookies ou comprovantes de reserva. Evite cache e uso em outros sites.
+      "Cache-Control": "no-store",
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+      "Cross-Origin-Resource-Policy": "same-origin",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
 
+// Todas as rotas usam a mesma validação de método e o mesmo tratamento de erros.
 export function endpoint(method, handler) {
   return async context => {
     if (context.request.method !== method) {
@@ -35,8 +41,11 @@ export function endpoint(method, handler) {
 }
 
 export async function readJson(request) {
+  // Navegadores sinalizam requisições de outros sites. Clientes sem esses cabeçalhos
+  // continuam sujeitos à validação do conteúdo e às regras de cada rota.
   const origin = request.headers.get("Origin");
-  if (origin && origin !== new URL(request.url).origin) {
+  const site = request.headers.get("Sec-Fetch-Site");
+  if ((origin && origin !== new URL(request.url).origin) || site === "cross-site" || site === "same-site") {
     throw new RequestError(403, "Origem não autorizada.");
   }
   const contentType = request.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase();
@@ -44,6 +53,7 @@ export async function readJson(request) {
     throw new RequestError(415, "Envie os dados em JSON.");
   }
 
+  // Conte os bytes durante a leitura para aplicar o limite mesmo sem Content-Length.
   const reader = request.body.getReader();
   const decoder = new TextDecoder();
   let bytes = 0;

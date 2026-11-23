@@ -2,6 +2,7 @@ import { readCatalog } from "../../server/catalog.js";
 import { endpoint } from "../../server/http.js";
 
 export const onRequest = endpoint("GET", async ({ env }) => {
+  // Esta rota consulta apenas aulas reais e expõe uma lista explícita de campos públicos.
   const { mode, classes } = await readCatalog(env, { atlasOnly: true, includeSessions: false });
 
   return {
