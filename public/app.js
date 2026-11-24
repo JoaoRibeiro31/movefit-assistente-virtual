@@ -19,9 +19,10 @@ const bookingStatus = document.querySelector('#booking-status');
 const bookingConfirm = document.querySelector('#booking-confirm');
 const bookingClose = document.querySelector('#close-booking');
 
-// Mantém só as últimas perguntas em memória para dar contexto, sem salvar no navegador.
+// Mantém um trecho recente da conversa em memória, sem persistir o histórico.
 const history = [];
-const maxPreviousQuestions = 4;
+const maxHistoryEntries = 8;
+const maxHistoryText = 500;
 let chatBusy = false;
 let bookingBusy = false;
 let catalog;
@@ -75,12 +76,22 @@ function appendMessage(text, role, source = '') {
   if (booking.hidden) conversation.scrollTop = conversation.scrollHeight;
 }
 
-function sourceLabel({ mode, dataMode }, action) {
-  if (mode === 'gemini') return dataMode === 'demo' ? 'Gemini · Dados demonstrativos' : 'Gemini';
-  if (action === 'hours' || action === 'faq') return 'Informações da MoveFIT';
-  if (dataMode === 'atlas') return 'Resposta automática · Dados do Atlas';
-  if (dataMode === 'unavailable') return 'Resposta automática';
-  return 'Modo demonstração';
+function sourceLabel({ mode, source }, action) {
+  if (mode === 'gemini') return 'Gemini';
+  if (source === 'movefit' || ['hours', 'classes', 'faq'].includes(action)) return 'Informações da MoveFIT';
+  return 'Resposta automática';
+}
+
+function rememberExchange(message, { reply, source }) {
+  history.push({ role: 'user', text: message });
+  if (source === 'conversation') {
+    // Preserva o fim da resposta, onde costuma estar a pergunta de acompanhamento.
+    history.push({ role: 'assistant', text: reply.trim().slice(-maxHistoryText).trim() });
+  }
+  while (history.length > maxHistoryEntries) {
+    history.shift();
+    if (history[0]?.role === 'assistant') history.shift();
+  }
 }
 
 async function requestJSON(path, options = {}) {
@@ -121,8 +132,7 @@ async function submitMessage(raw, action) {
     if (typeof result.reply !== 'string' || !result.reply.trim()) {
       throw new Error('O servidor não enviou uma resposta. Tente novamente.');
     }
-    history.push({ role: 'user', text: message });
-    if (history.length > maxPreviousQuestions) history.shift();
+    rememberExchange(message, result);
     appendMessage(result.reply, 'assistant', sourceLabel(result, action));
     if (result.nextAction === 'schedule') openBooking(!messageInput.value);
   } catch (error) {
