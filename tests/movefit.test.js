@@ -76,18 +76,24 @@ test("o chat pede nível e objetivo e usa a resposta para dar exemplos práticos
   assert.match(followUp.body.reply, /começando/);
 });
 
-test("uma lesão mencionada antes impede exemplos de treino na continuação", async () => {
+test("uma lesão mencionada antes impede exemplos de treino e chamadas ao Gemini na continuação", async t => {
+  const fetch = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error("A pergunta de treino com contexto de saúde deve ser tratada no servidor.");
+  });
   const result = await call(chat, {
+    env: { GEMINI_API_KEY: "fake-test-key" },
     payload: {
       message: "Tem exercícios para fortalecer?",
       history: [{ role: "user", text: "Estou me recuperando de uma lesão." }],
     },
   });
+  assert.equal(result.body.mode, "demo");
   assert.match(result.body.reply, /profissional/);
   assert.doesNotMatch(result.body.reply, /cadeira firme|flexão/);
+  assert.equal(fetch.mock.callCount(), 0);
 });
 
-test("o Gemini classifica pedidos de treino e o servidor valida as orientações", async t => {
+test("o servidor rejeita uma prescrição numérica do Gemini e usa orientações locais", async t => {
   const fetch = t.mock.method(globalThis, "fetch", async () => Response.json({
     candidates: [{ content: { parts: [{ text: JSON.stringify({
       intent: "workout", classId: "", date: "", reply: "Faça 150 flexões diárias.",
@@ -97,10 +103,85 @@ test("o Gemini classifica pedidos de treino e o servidor valida as orientações
     env: { GEMINI_API_KEY: "fake-test-key" },
     payload: { message: "Quero exercícios de força, já treino regularmente." },
   });
-  assert.equal(result.body.mode, "gemini");
+  assert.equal(result.body.mode, "demo");
+  assert.equal(result.body.source, "conversation");
   assert.match(result.body.reply, /remada no aparelho, leg press e supino em máquina/);
   assert.doesNotMatch(result.body.reply, /150 flexões/);
   assert.equal(fetch.mock.callCount(), 1);
+});
+
+test("uma resposta curta continua a conversa de treino com a orientação do Gemini", async t => {
+  const earlierQuestion = "Quero melhorar meu condicionamento.";
+  const earlierReply = "Você está começando ou já treina regularmente?";
+  const reply = "Como você está começando, experimente alternar caminhada e trote leve se estiver confortável.";
+  let context;
+  const fetch = t.mock.method(globalThis, "fetch", async (_url, options) => {
+    const { contents } = JSON.parse(options.body);
+    context = JSON.parse(contents[0].parts[0].text);
+    return Response.json({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({
+        intent: "workout", classId: "", date: "", reply,
+      }) }] } }],
+    });
+  });
+  const result = await call(chat, {
+    env: { GEMINI_API_KEY: "fake-test-key" },
+    payload: {
+      message: "Começando",
+      history: [{ role: "user", text: earlierQuestion }, { role: "assistant", text: earlierReply }],
+    },
+  });
+  assert.equal(fetch.mock.callCount(), 1);
+  assert.deepEqual(context, {
+    question: "Começando",
+    history: [{ role: "user", text: earlierQuestion }, { role: "assistant", text: earlierReply }],
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.mode, "gemini");
+  assert.equal(result.body.source, "conversation");
+  assert.equal(result.body.reply, reply);
+});
+
+test("uma pergunta sobre condicionamento e aquecimento recebe a comparação do Gemini", async t => {
+  const reply = "Aquecimento prepara o corpo para o esforço imediato. Condicionamento melhora sua capacidade física ao longo do tempo.";
+  const fetch = t.mock.method(globalThis, "fetch", async () => Response.json({
+    candidates: [{ content: { parts: [{ text: JSON.stringify({
+      intent: "warmup", classId: "", date: "", reply,
+    }) }] } }],
+  }));
+  const result = await call(chat, {
+    env: { GEMINI_API_KEY: "fake-test-key" },
+    payload: { message: "Qual a diferença entre condicionamento e aquecimento?" },
+  });
+  assert.equal(fetch.mock.callCount(), 1);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.mode, "gemini");
+  assert.equal(result.body.source, "conversation");
+  assert.equal(result.body.reply, reply);
+});
+
+test("sem resposta do Gemini, a comparação ainda recebe uma explicação local", async t => {
+  const fetch = t.mock.method(globalThis, "fetch", async url => Response.json({
+    candidates: [{ content: { parts: [{ text: JSON.stringify({
+      intent: "warmup", classId: "", date: "",
+      reply: url.endsWith("/gemini-3.5-flash-lite:generateContent")
+        ? "Para se aquecer, movimente as articulações com calma."
+        : "",
+    }) }] } }],
+  }));
+  const result = await call(chat, {
+    env: { GEMINI_API_KEY: "fake-test-key" },
+    payload: { message: "Qual a diferença entre condicionamento e aquecimento?" },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(fetch.mock.callCount(), 2);
+  assert.equal(result.body.mode, "demo");
+  assert.equal(result.body.source, "conversation");
+  assert.match(result.body.reply, /condicionamento/i);
+  assert.match(result.body.reply, /aquecimento/i);
+  assert.match(result.body.reply, /treino/i);
+  assert.match(result.body.reply, /ao longo/i);
+  assert.doesNotMatch(result.body.reply, /comece o aquecimento/i);
 });
 
 test("a simulação exige confirmação, dia correto e vaga, sem alterar a disponibilidade", async () => {
@@ -136,7 +217,8 @@ test("o Gemini recebe apenas nomes e IDs do catálogo e a API lista os horários
   });
   assert.equal(fetch.mock.callCount(), 1);
   assert.equal(result.status, 200);
-  assert.equal(result.body.mode, "gemini");
+  assert.equal(result.body.mode, "demo");
+  assert.equal(result.body.source, "movefit");
   assert.equal(result.body.dataMode, "demo");
   assert.match(result.body.reply, /Funcional, quinta-feira às 18:00/);
   assert.doesNotMatch(result.body.reply, /23:59|Pilates/);
@@ -164,10 +246,13 @@ test("o chat limita o contexto do Gemini e remove identificadores comuns da entr
     payload: {
       message: `Funcional em 2029-10-16? ${email} ${phone} ${key} ${code}`,
       history: [
+        { role: "user", text: "Mensagem antiga, fora da janela de contexto." },
+        { role: "assistant", text: "Bem-vindo! Em que posso ajudar?" },
         { role: "user", text: `Posso ver os horários? CPF ${cpf}` },
         { role: "user", text: `Tenho dor no joelho. ${mongoUri}` },
         { role: "user", text: `Preciso de ajuda. ${mongoUri}` },
-        { role: "assistant", text: "Resposta anterior do Muvinho" },
+        { role: "assistant", text: `Resposta anterior do Muvinho ${email}` },
+        { role: "assistant", text: "Em caso de lesão, procure um profissional." },
       ],
     },
   });
@@ -175,9 +260,11 @@ test("o chat limita o contexto do Gemini e remove identificadores comuns da entr
   assert.equal(result.status, 200);
   const context = JSON.parse(contents[0].parts[0].text);
   assert.match(context.question, /^Funcional em 2029-10-16\?/);
-  assert.deepEqual(context.previousQuestions, [
-    "Posso ver os horários? CPF [dado removido]",
-    "Preciso de ajuda. [dado removido]",
+  assert.deepEqual(context.history, [
+    { role: "assistant", text: "Bem-vindo! Em que posso ajudar?" },
+    { role: "user", text: "Posso ver os horários? CPF [dado removido]" },
+    { role: "user", text: "Preciso de ajuda. [dado removido]" },
+    { role: "assistant", text: "Resposta anterior do Muvinho [dado removido]" },
   ]);
   for (const secret of [key, email, phone, cpf, mongoUri, code]) {
     assert.ok(!JSON.stringify(contents).includes(secret));
